@@ -2,9 +2,9 @@ name: React CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ initial_files ]
   pull_request:
-    branches: [ main ]
+    branches: [ initial_files ]
 
 jobs:
   build:
