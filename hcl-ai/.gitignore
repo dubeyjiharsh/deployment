@@ -45,8 +45,3 @@ vuln-0001.md
 # llm cache
 /.cache
 /test-documents
-.dockerignore
-.env.docker.example
-docker-compose.yml
-Dockerfile
-Makefile

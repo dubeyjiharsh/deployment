@@ -1,0 +1,79 @@
+services:
+  # PostgreSQL with pgvector extension
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: hcl-ai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hclai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hclai_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-hclai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hclai} -d ${POSTGRES_DB:-hclai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Hocuspocus Collaboration Server
+  hocuspocus:
+    build:
+      context: ../hocuspocus
+      dockerfile: Dockerfile
+    container_name: hcl-ai-hocuspocus
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      # Point to the app service for token verification
+      NEXTJS_API_URL: http://app:3000
+      NODE_ENV: production
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hcl-ai-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Database connection (uses the db service)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hclai}:${POSTGRES_PASSWORD:-hclai_secret}@db:5432/${POSTGRES_DB:-hclai}
+      DATABASE_SSL: "false"
+
+      # Authentication (REQUIRED - generate with: openssl rand -base64 32)
+      AUTH_SECRET: ${AUTH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+
+      # LLM API Keys (at least one required)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Optional: Web search
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+
+      # Collaboration server (uses the hocuspocus service)
+      NEXT_PUBLIC_HOCUSPOCUS_URL: ws://localhost:3001
+
+      # CORS (update for production)
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+
+      # Node environment
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      hocuspocus:
+        condition: service_started
+    volumes:
+      - app_data:/app/data
+
+volumes:
+  postgres_data:
+  app_data:
