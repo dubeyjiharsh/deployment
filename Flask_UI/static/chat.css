@@ -1,0 +1,323 @@
+/* Global Styles */
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    height: calc(100vh - 40px);
+    background: linear-gradient(to right, #f5f7fa, #c3cfe2);
+    color: #333;
+    gap: 20px;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 14%;
+    background: linear-gradient(160deg, #0a2342 0%, #19376d 100%); /* Dark blue gradient */
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(10, 35, 66, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    color: #fff;
+    min-width: 180px;
+}
+
+.sidebar h3 {
+    color: #e0e7ff;
+    letter-spacing: 1px;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+/* Upload Box */
+.upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+input[type="file"] {
+    font-size: 12px;
+    border: 1px solid #ced4da;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+/* Buttons */
+.button {
+    background: linear-gradient(90deg, #233e8b 0%, #4062bb 100%);
+    color: #fff;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 2px 8px rgba(35, 62, 139, 0.08);
+}
+
+.button:hover {
+    background: linear-gradient(90deg, #4062bb 0%, #233e8b 100%);
+    transform: translateY(-2px) scale(1.03);
+}
+
+/* Main Overview */
+.main-overview {
+    width: 32%;
+    padding: 20px;
+    background: #ffffff;
+    display: none;
+    flex-direction: column;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    max-height: 80vh;           /* Limit height */
+    overflow-y: auto;           /* Scrollbar if content overflows */
+}
+
+/* Fields List: Scrollbar for many fields */
+.fields-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 60vh;           /* Limit height for the list */
+    overflow-y: auto;           /* Scrollbar for the list */
+    padding-right: 8px;         /* Space for scrollbar */
+}
+
+/* Field Row Layout */
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Field Label Styling */
+.field-label {
+    min-width: 160px;
+    font-weight: 500;
+    color: #343a40;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Field Value (Textbox) Styling */
+.field-value {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid #a0aec0;
+    border-radius: 7px;
+    background: linear-gradient(90deg, #f5f7fa 60%, #e3eafc 100%);
+    color: #495057;
+    font-size: 14px;
+    font-family: inherit;
+    box-shadow: 0 1px 4px rgba(160, 174, 192, 0.08);
+    transition: border 0.2s, box-shadow 0.2s;
+}
+.field-value[readonly] {
+    background: linear-gradient(90deg, #f5f7fa 60%, #e3eafc 100%);
+    color: #495057;
+    cursor: not-allowed;
+    font-weight: 500;
+    opacity: 1;
+}
+
+/* Chat Section */
+.chat-section {
+    width: 50%;
+    padding: 20px;
+    background: #ffffff;
+    display: none;
+    flex-direction: column;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
+}
+
+h2, h3 {
+    margin-top: 0;
+    color: #343a40;
+}
+
+/* Dropdown */
+select {
+    font-size: 14px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #293036;
+    background-color: #e2e6ea;
+
+    #formDropdown {
+    font-size: 14px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #0d6efd;
+    background-color: #f0f8ff;
+    color: #26242c00; /* default text color */
+    font-weight: 500;
+}
+
+#formDropdown.active-highlight {
+    color: #0d6efd; /* Blue text */
+    font-weight: bold;
+    border-color: #0d6efd;
+    background-color: #e6f0ff;
+}
+#formDropdown option:checked {
+    background-color: #0d6efd;
+    color: white;
+}
+#formDropdown option:checked {
+    background-color: #0d6efd; /* Blue background for selected option */
+    color: #33414e56;               /* White text for selected */
+}
+#formDropdown.highlighted {
+    background-color: #d1e7dd; /* greenish hint to indicate selection */
+    border-color: #198754;
+}
+
+}
+
+/* Chat */
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-grow: 1;
+    overflow-y: auto;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 12px;
+    background: #f1f3f5;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+}
+
+.chat-input button {
+    background: linear-gradient(to right, #00c6ff, #0072ff);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.chat-input button:hover {
+    background: linear-gradient(to right, #009fff, #0066ff);
+}
+
+/* Chat Bubbles */
+.chat-message {
+    margin: 10px 0;
+    max-width: 75%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    line-height: 1.4;
+    animation: fadeIn 0.3s ease-in-out;
+    word-wrap: break-word;
+    display: inline-block;
+}
+
+.chat-message.bot {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    align-self: flex-start;
+    border-top-left-radius: 0;
+}
+
+.chat-message.user {
+    background-color: #f3e5f5;
+    color: #4a148c;
+    align-self: flex-end;
+    border-top-right-radius: 0;
+    text-align: right;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Download Button */
+.download-button {
+
+    background: linear-gradient(135deg, #00c9ff, #c273f0); /* Bright blue-green gradient */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    width: fit-content;
+    align-self: flex-end;
+    margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.download-button:hover {
+    background: linear-gradient(135deg, #5ee7df, #b490ca); /* Vibrant on hover */
+    transform: scale(1.05);
+}
+
+
+
+/* List Styling */
+ul {
+    list-style: none;
+    padding: 0;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+ul li::before {
+    content: "*";
+    color: #ff0000;
+    margin-right: 8px;
+}
+
+/* Uploaded Forms Dropdown */
+#uploadedForms {
+    font-size: 14px;
+    padding: 10px 8px;
+    border-radius: 7px;
+    border: 1.5px solid #4062bb;
+    background: linear-gradient(90deg, #233e8b 60%, #4062bb 100%);
+    color: #e0e7ff;           /* Always visible light blue text */
+    font-weight: 500;
+    margin-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(35, 62, 139, 0.07);
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+#uploadedForms option {
+    background: #19376d;
+    color: #e0e7ff;
+}
