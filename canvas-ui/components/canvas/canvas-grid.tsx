@@ -499,14 +499,13 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
         <div className="flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="canvas">Canvas</TabsTrigger>
-            <TabsTrigger value="brd">BRD</TabsTrigger>
           </TabsList>
           <div className="text-xs text-muted-foreground">All fields visible (static demo)</div>
         </div>
 
         <TabsContent value="canvas" className="mt-4 space-y-4">
           {/* Field grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {contentConfigs.map((config) => {
               const raw = (canvas as Record<string, unknown>)[config.fieldKey];
               const field = ensureField(raw, config.valueType);
@@ -514,7 +513,7 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
 
               return (
                 <Card key={config.fieldKey} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-start gap-3">
                     <div className="min-w-0">
                       <h3 className="font-semibold text-primary truncate">{config.name}</h3>
                     </div>
