@@ -87,8 +87,8 @@ export function UserManagementPage(): React.ReactElement {
       <div className="max-w-5xl space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-primary">User Management</h1>
-            <p className="text-sm text-muted-foreground">Static demo page (no persistence, no auth).</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-blue-500">User Management</h1>
+            <p className="text-sm text-blue-500">Static demo page (no persistence, no auth).</p>
           </div>
           <Button onClick={openModal}>Add user</Button>
         </div>

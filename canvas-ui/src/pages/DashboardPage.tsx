@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
 
 
 export function DashboardPage(): React.ReactElement {
@@ -30,33 +31,46 @@ export function DashboardPage(): React.ReactElement {
 
   return (
     <div className="p-6">
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-primary">Business canvases</h1>
-            <p className="text-sm text-muted-foreground">Manage and view your AI-generated business canvases</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-blue-500">Dashboard</h1>
+            <p className="text-sm text-blue-500">Manage and view your AI-generated business canvases</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search canvases..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-48"
-              aria-label="Search canvases"
-            />
+          <div className="flex items-center justify-end gap-1">
+            <div className="relative w-48 h-12">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <Input
+                placeholder="Search"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-10 w-48 h-12"
+                aria-label="Search"
+              />
+            </div>
             <select
               value={sortOrder}
               onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
-              className="border rounded px-2 py-1 text-sm bg-background"
+              className="border rounded px-2 py-1 text-sm bg-background w-48 h-12"
               aria-label="Sort by time"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
             </select>
-            <div className="flex items-center space-x-3 ml-4">
+            <div className="flex items-center space-x-1">
               <Button
                 variant={view === 'grid' ? 'default' : 'outline'}
                 size="icon"
+                className="w-12 h-12 flex justify-center items-center"
                 onClick={() => setView('grid')}
                 aria-label="Grid view"
               >
@@ -70,6 +84,7 @@ export function DashboardPage(): React.ReactElement {
               <Button
                 variant={view === 'list' ? 'default' : 'outline'}
                 size="icon"
+                className="w-12 h-12 flex justify-center items-center"
                 onClick={() => setView('list')}
                 aria-label="List view"
               >
@@ -91,14 +106,14 @@ export function DashboardPage(): React.ReactElement {
             <a key={canvas.id} href={linkTo(`/canvas/${canvas.id}`)} className="block">
               <Card className="border cursor-pointer transition-colors hover:bg-muted/30">
                 <CardHeader>
-                  <CardTitle className="text-base">{canvas?.title?.value || "Demo Canvas"}</CardTitle>
+                  <CardTitle className="text-base text-blue-500">{canvas?.title?.value || "Demo Canvas"}</CardTitle>
                   <CardDescription className="line-clamp-2">
                     {canvas?.problemStatement?.value || "Click to open the demo canvas."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-between gap-3">
                   <div className="text-xs text-muted-foreground">
-                    {canvas.createdAt ? new Date(canvas.createdAt).toLocaleString() : ""}
+                    {canvas.createdAt ? formatDistanceToNow(new Date(canvas.createdAt), { addSuffix: true }) : ""}
                   </div>
                   <div className="text-sm text-primary">Open canvas</div>
                 </CardContent>
