@@ -28,15 +28,21 @@ export function CreateCanvasPage(): React.ReactElement {
       <div className="p-6 flex flex-col justify-between w-full max-w-3xl">
         <div className="max-w-3xl space-y-4">
           <div>
-            <div className="text-center">
-              <h1 className="text-5xl font-extrabold text-blue-500">
+            <div className="text-center relative">
+              <img
+                src="/images/Container.png"
+                alt="Background Container"
+                className="absolute left-1/2 top-1/2 w-[140%] max-w-none h-auto -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none select-none z-0"
+                style={{ filter: "none" }}
+              />
+              <h1 className="text-5xl font-extrabold text-blue-500 relative z-10">
                 Create Business Canvas
               </h1>
-              <p className="mt-4 text-lg text-black">
-                Describe your problem or opportunity, and our AI will help you create a comprehensive business canvas
+              <p className="mt-4 text-lg text-black relative z-10">
+                Describe your problem or opportunity, and our AI will help you
+                create a comprehensive business canvas
               </p>
             </div>
-            <p className="text-sm text-white">Static demo mode: this doesn’t create anything yet.</p>
           </div>
         </div>
 
@@ -46,7 +52,10 @@ export function CreateCanvasPage(): React.ReactElement {
               <DialogTitle>Upload File</DialogTitle>
             </DialogHeader>
             <div className="mt-4">
-              <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="file-upload"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Upload File
               </label>
               <input
@@ -72,30 +81,38 @@ export function CreateCanvasPage(): React.ReactElement {
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
                 placeholder="Describe your problem or opportunity"
-                className="flex-grow bg-white bg-opacity-20 placeholder:text-black pr-16 h-20 w-full"
+                className="flex-grow bg-white bg-opacity-20 placeholder:text-black pr-28 h-20 w-full"
               />
               <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-2">
                 <button
                   className="p-2 bg-white border rounded-full shadow"
-                  onClick={() => document.getElementById('file-input').click()}
+                  onClick={() => document.getElementById("file-input")?.click()}
                 >
-                  <img src="/public/images/attach-icon.jpg" alt="Attach" className="h-6 w-6 object-contain" />
+                  <img
+                    src="/public/images/attach-icon.jpg"
+                    alt="Attach"
+                    className="h-6 w-6 object-contain"
+                  />
                 </button>
                 <button
                   className="p-2 bg-white border rounded-full shadow"
-                  onClick={() => window.location.href = '/canvas/demo#/canvas/demo'}
+                  onClick={() => (window.location.href = "/canvas/demo#/canvas/demo")}
                 >
-                  <img src="/public/images/send-icon.jpg" alt="Send" className="h-6 w-6 object-contain" />
+                  <img
+                    src="/public/images/send-icon.jpg"
+                    alt="Send"
+                    className="h-6 w-6 object-contain"
+                  />
                 </button>
               </div>
               <input
                 id="file-input"
                 type="file"
                 accept=".pdf,.doc,.docx"
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
-                    console.log('Attached file:', e.target.files[0]);
+                    console.log("Attached file:", e.target.files[0]);
                   }
                 }}
               />
