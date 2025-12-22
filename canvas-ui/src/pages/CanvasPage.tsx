@@ -1,6 +1,7 @@
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { Download, Save } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { CanvasGrid } from "@/components/canvas/canvas-grid";
@@ -11,22 +12,33 @@ import type { BusinessCanvas } from "@/lib/validators/canvas-schema";
 export function CanvasPage(): React.ReactElement {
   const path = useHashPath();
   const canvasId = path.split("/")[2] || DEMO_CANVAS_ID;
+  const [searchParams] = useSearchParams();
 
-  const [canvas, setCanvas] = React.useState<BusinessCanvas>(() => getDemoCanvas(DEMO_CANVAS_ID));
-  const [headerPortal, setHeaderPortal] = React.useState<HTMLElement | null>(null);
-  const [actionsPortal, setActionsPortal] = React.useState<HTMLElement | null>(null);
+  const [canvas, setCanvas] = React.useState<BusinessCanvas | null>(null);
+  const [jsonData, setJsonData] = React.useState<object | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setHeaderPortal(document.getElementById("page-header"));
-    setActionsPortal(document.getElementById("page-actions"));
-  }, []);
+    const data = searchParams.get("data");
+    if (data) {
+      try {
+        const parsedData = JSON.parse(decodeURIComponent(data));
+        setCanvas(parsedData);
+        setJsonData(parsedData);
+      } catch (err) {
+        console.error("Failed to parse JSON data:", err);
+        setError("Invalid JSON format. Unable to display data.");
+      }
+    } else {
+      setError("No data provided in the URL.");
+    }
+  }, [searchParams]);
 
   React.useEffect(() => {
     if (canvasId !== DEMO_CANVAS_ID) {
       navigate(`/canvas/${DEMO_CANVAS_ID}`, { replace: true });
       return;
     }
-    setCanvas(getDemoCanvas(DEMO_CANVAS_ID));
   }, [canvasId]);
 
   const handleExportJson = (): void => {
@@ -50,50 +62,79 @@ export function CanvasPage(): React.ReactElement {
     }
   };
 
-  React.useEffect(() => {
-    const savedCanvas = localStorage.getItem("savedCanvas");
-    if (savedCanvas) {
-      try {
-        setCanvas(JSON.parse(savedCanvas));
-      } catch (error) {
-        console.error("Failed to load saved canvas:", error);
-      }
-    }
-  }, []);
+  if (error) {
+    return <div className="p-6 text-red-500">{error}</div>;
+  }
+
+  if (!canvas) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
     <>
-      {headerPortal &&
-        ReactDOM.createPortal(
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-medium truncate max-w-[300px]">
-              {canvas.title?.value || "Untitled Canvas"}
-            </h1>
-            {/* <Button variant="outline" size="sm" onClick={handleSave} className="ml-3">
-              <Save className="mr-2" />
-              Save
-            </Button> */}
-          </div>,
-          headerPortal
-        )}
+      {ReactDOM.createPortal(
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-medium truncate max-w-[300px]">
+            {canvas.title?.value || "Untitled Canvas"}
+          </h1>
+        </div>,
+        document.getElementById("page-header")!
+      )}
 
-      {actionsPortal &&
-        ReactDOM.createPortal(
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={handleSave}>
-              <Save className="mr-2" />
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportJson}>
-              <Download className="mr-2" />
-              Export JSON
-            </Button>
-          </div>,
-          actionsPortal
-        )}
+      {ReactDOM.createPortal(
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={handleSave}>
+            <Save className="mr-2" />
+            Save
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportJson}>
+            <Download className="mr-2" />
+            Export JSON
+          </Button>
+        </div>,
+        document.getElementById("page-actions")!
+      )}
+
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">{canvas.bmc_result?.Title || "Untitled Canvas"}</h1>
+        <p className="mb-4">{canvas.bmc_result?.Problem_Statement || "No problem statement provided."}</p>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Objectives</h2>
+          <ul className="list-disc pl-6">
+            {canvas.bmc_result?.Objectives?.map((objective, index) => (
+              <li key={index}>{objective}</li>
+            ))}
+          </ul>
+
+          <h2 className="text-xl font-semibold">Key Features</h2>
+          <ul className="list-disc pl-6">
+            {canvas.bmc_result?.Key_Features?.map((feature, index) => (
+              <li key={index}>
+                <strong>{feature.feature}:</strong> {feature.description}
+              </li>
+            ))}
+          </ul>
+
+          <h2 className="text-xl font-semibold">Risks</h2>
+          <ul className="list-disc pl-6">
+            {canvas.bmc_result?.Risks?.map((risk, index) => (
+              <li key={index}>
+                <strong>{risk.risk}:</strong> {risk.mitigation}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       <div className="p-6">
         <CanvasGrid canvas={canvas} onCanvasChange={setCanvas} />
+      </div>
+
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Output JSON Data</h1>
+        <pre className="bg-gray-100 p-4 rounded-md overflow-auto text-sm">
+          {JSON.stringify(jsonData, null, 2)}
+        </pre>
       </div>
     </>
   );
