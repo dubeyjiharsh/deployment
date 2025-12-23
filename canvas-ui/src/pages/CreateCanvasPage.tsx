@@ -17,29 +17,53 @@ export function CreateCanvasPage(): React.ReactElement {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [file, setFile] = React.useState<File | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+  // Chat state: array of {role: 'user'|'assistant', content: string}
+  const [chat, setChat] = React.useState<Array<{role: string, content: string}>>([]);
+  // Track if file has been uploaded at least once
+  const [fileUploaded, setFileUploaded] = React.useState(false);
+  // Store canvas id after creation
+  // Remove canvasId from state, always fetch from sessionStorage for latest value
 
   const handleFileUpload = (files: FileList | null) => {
     if (files && files.length > 0) {
       setFile(files[0]);
+      setFileUploaded(true);
     }
   };
 
   const handleSubmit = async () => {
-    if (!idea || !file) {
-      alert("Please provide a problem statement and upload a file.");
+    if (!idea) {
+      alert("Please provide a problem statement.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("problem_statement", idea);
-    formData.append("file", file);
+    // For first message, require file
+    if (chat.length === 0 && !file) {
+      alert("Please upload a file for the first message.");
+      return;
+    }
 
+    setChat((prev) => [...prev, {role: "user", content: idea}]);
     setIsLoading(true);
 
     try {
-      console.log("Sending data to backend...");
+      let result;
+      // Always fetch the latest canvasId from sessionStorage
+      const id = typeof window !== "undefined" ? sessionStorage.getItem("canvasId") : null;
+      if (!id) {
+        setChat((prev) => [...prev, {role: "assistant", content: "No canvas ID found. Please click 'Create New' first."}]);
+        setIsLoading(false);
+        setIdea("");
+        return;
+      }
+      // Always send to /api/canvas/{canvas_id}/message
+      const formData = new FormData();
+      formData.append("prompt", idea);
+      if (file) {
+        formData.append("file", file);
+      }
       const response = await axios.post(
-        "http://0.0.0.0:8021/generate_bmc_instant",
+        `http://0.0.0.0:8020/api/canvas/${id}/message`,
         formData,
         {
           headers: {
@@ -47,49 +71,46 @@ export function CreateCanvasPage(): React.ReactElement {
           },
         }
       );
-
-      const result = response.data;
-      console.log("Backend response:", result);
-
-      // Store the result in sessionStorage
+      result = response.data;
+      setChat((prev) => [...prev, {role: "assistant", content: result?.output || "No response"}]);
       sessionStorage.setItem("canvasData", JSON.stringify(result));
-
-      // Navigate to the results page using hash routing
-      window.location.hash = "/canvas/result";
-      
     } catch (error) {
+      setChat((prev) => [...prev, {role: "assistant", content: "Failed to generate the business canvas. Please try again."}]);
       console.error("Error submitting data:", error);
-      alert("Failed to generate the business canvas. Please try again.");
     } finally {
       setIsLoading(false);
+      setIdea("");
     }
   };
 
   const handleRemoveFile = () => {
     setFile(null);
+    setFileUploaded(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="p-6 flex flex-col justify-between w-full max-w-3xl">
         <div className="max-w-3xl space-y-4">
-          <div>
-            <div className="text-center relative">
-              <img
-                src="/images/Container.png"
-                alt="Background Container"
-                className="absolute left-1/2 top-1/2 w-[140%] max-w-none h-auto -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none select-none z-0"
-                style={{ filter: "none" }}
-              />
-              <h1 className="text-5xl font-extrabold text-blue-500 relative z-10">
-                Create Business Canvas
-              </h1>
-              <p className="mt-4 text-lg text-black relative z-10">
-                Describe your problem or opportunity, and our AI will help you
-                create a comprehensive business canvas
-              </p>
+          {!chat.length && (
+            <div>
+              <div className="text-center relative">
+                <img
+                  src="/images/Container.png"
+                  alt="Background Container"
+                  className="absolute left-1/2 top-1/2 w-[140%] max-w-none h-auto -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none select-none z-0"
+                  style={{ filter: "none" }}
+                />
+                <h1 className="text-5xl font-extrabold text-blue-500 relative z-10">
+                  Create Business Canvas
+                </h1>
+                <p className="mt-4 text-lg text-black relative z-10">
+                  Describe your problem or opportunity, and our AI will help you
+                  create a comprehensive business canvas
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -121,6 +142,17 @@ export function CreateCanvasPage(): React.ReactElement {
         </Dialog>
 
         <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-full max-w-2xl p-6 pt-0 space-y-3 bg-white bg-opacity-10 backdrop-blur-md">
+          {/* Chat UI */}
+          <div className="flex flex-col gap-4 mb-4">
+            {chat.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* File info */}
           {file && (
             <div className="bg-white rounded-lg p-3 shadow-sm border flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -143,61 +175,66 @@ export function CreateCanvasPage(): React.ReactElement {
               </button>
             </div>
           )}
-          
-          <div className="flex items-center">
-            <div className="relative w-full">
-              <Textarea
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                placeholder="Describe your problem or opportunity"
-                className="flex-grow bg-white bg-opacity-20 placeholder:text-black pr-28 h-20 w-full"
-                disabled={isLoading}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-2">
-                <button
-                  className="p-2 bg-white border rounded-full shadow disabled:opacity-50 hover:bg-gray-50 transition-colors"
-                  onClick={() => document.getElementById("file-input")?.click()}
+          {/* Input and send */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center w-full gap-2">
+              <div className="relative flex-grow" style={{ maxWidth: 'calc(100% - 48px)' }}>
+                <Textarea
+                  value={idea}
+                  onChange={(e) => setIdea(e.target.value)}
+                  placeholder="Type your message..."
+                  className="bg-white bg-opacity-20 placeholder:text-black pr-28 h-20 w-full"
                   disabled={isLoading}
-                  title="Attach file"
-                >
-                  <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </button>
-                <button
-                  className="p-2 bg-blue-500 border border-blue-500 rounded-full shadow disabled:opacity-50 hover:bg-blue-600 transition-colors"
-                  onClick={handleSubmit}
-                  disabled={isLoading || !idea || !file}
-                  title="Generate canvas"
-                >
-                  {isLoading ? (
-                    <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-2">
+                  <button
+                    className="p-2 bg-white border rounded-full shadow disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    onClick={() => document.getElementById("file-input")?.click()}
+                    disabled={isLoading}
+                    aria-label="Attach file"
+                  >
+                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
-                  )}
-                </button>
+                  </button>
+                  <button
+                    className="p-2 bg-blue-500 border border-blue-500 rounded-full shadow disabled:opacity-50 hover:bg-blue-600 transition-colors rotate-90"
+                    onClick={handleSubmit}
+                    disabled={isLoading || !idea || (chat.length === 0 && !file)}
+                    aria-label="Send"
+                  >
+                    {isLoading ? (
+                      <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleFileUpload(e.target.files);
+                    }
+                  }}
+                />
               </div>
-              <input
-                id="file-input"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    handleFileUpload(e.target.files);
-                  }
-                }}
-              />
+              <button
+                className="p-2 bg-white border rounded-full shadow disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                aria-label="Preview"
+                tabIndex={0}
+                type="button"
+                onClick={() => { window.location.hash = '/canvas-preview'; }}
+              >
+                <img src="/dist/images/preview.png" alt="Preview" className="h-6 w-6" draggable="false" />
+              </button>
             </div>
           </div>
-          
-          {isLoading && (
-            <div className="text-center text-sm text-gray-600">
-              Generating your business canvas... This may take a moment.
-            </div>
-          )}
         </div>
       </div>
     </div>

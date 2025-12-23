@@ -1,0 +1,14 @@
+[Unit]
+Description=Vite Dev Server (Canvas UI)
+After=network.target
+
+[Service]
+Type=simple
+User=arvind
+WorkingDirectory=/home/arvind/Desktop/test/gap-canvas/canvas-ui
+ExecStart=/usr/bin/npm run dev -- --port 2003
+Restart=always
+Environment=NODE_ENV=development
+
+[Install]
+WantedBy=multi-user.target

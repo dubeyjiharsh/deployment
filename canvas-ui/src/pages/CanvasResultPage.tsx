@@ -78,7 +78,16 @@ export function CanvasResultPage(): React.ReactElement {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <p className="text-red-500 text-lg">{error}</p>
-          <Button onClick={handleBack}>
+          <Button
+            onClick={async () => {
+              try {
+                await fetch("http://0.0.0.0:8020/api/canvas/create", { method: "POST" });
+              } catch (err) {
+                console.error("Failed to call canvas create API", err);
+              }
+              handleBack();
+            }}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Create New Canvas
           </Button>

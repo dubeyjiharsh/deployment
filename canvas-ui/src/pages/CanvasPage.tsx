@@ -42,6 +42,7 @@ export function CanvasPage(): React.ReactElement {
   }, [canvasId]);
 
   const handleExportJson = (): void => {
+    if (!canvas) return;
     const blob = new Blob([JSON.stringify(canvas, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -96,19 +97,23 @@ export function CanvasPage(): React.ReactElement {
       )}
 
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">{canvas.bmc_result?.Title || "Untitled Canvas"}</h1>
-        <p className="mb-4">{canvas.bmc_result?.Problem_Statement || "No problem statement provided."}</p>
+        <h1 className="text-2xl font-bold mb-4">{canvas.title?.value || "Untitled Canvas"}</h1>
+        <p className="mb-4">{canvas.problemStatement?.value || "No problem statement provided."}</p>
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Objectives</h2>
           <ul className="list-disc pl-6">
-            {canvas.bmc_result?.Objectives?.map((objective, index) => (
-              <li key={index}>{objective}</li>
-            ))}
+            {Array.isArray(canvas.objectives?.value)
+              ? canvas.objectives.value
+                  .filter((objective): objective is string => typeof objective === "string")
+                  .map((objective, index) => (
+                    <li key={index}>{objective}</li>
+                  ))
+              : null}
           </ul>
 
           <h2 className="text-xl font-semibold">Key Features</h2>
           <ul className="list-disc pl-6">
-            {canvas.bmc_result?.Key_Features?.map((feature, index) => (
+            {canvas.keyFeatures?.value?.map((feature: any, index: number) => (
               <li key={index}>
                 <strong>{feature.feature}:</strong> {feature.description}
               </li>
@@ -117,7 +122,7 @@ export function CanvasPage(): React.ReactElement {
 
           <h2 className="text-xl font-semibold">Risks</h2>
           <ul className="list-disc pl-6">
-            {canvas.bmc_result?.Risks?.map((risk, index) => (
+            {canvas.risks?.value?.map((risk: any, index: number) => (
               <li key={index}>
                 <strong>{risk.risk}:</strong> {risk.mitigation}
               </li>

@@ -26,11 +26,22 @@ export function SiteHeader() {
         {isCanvasPage && <div id="page-header" className="flex items-center gap-4" />}
         <div className="ml-auto flex items-center gap-2">
           {!isCanvasPage && (
-            <Button asChild>
-              <a href={linkTo("/canvas/create")}>
-                <Plus className="h-4 w-4" />
-                Create New
-              </a>
+            <Button
+              onClick={async () => {
+                try {
+                  const res = await fetch("http://0.0.0.0:8020/api/canvas/create", { method: "POST" });
+                  const data = await res.json();
+                  if (data?.canvas_id) {
+                    sessionStorage.setItem("canvasId", data.canvas_id);
+                  }
+                } catch (err) {
+                  console.error("Failed to call canvas create API", err);
+                }
+                window.location.hash = linkTo("/canvas/create");
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Create New
             </Button>
           )}
           <div id="page-actions" className="flex items-center gap-2" />

@@ -12,6 +12,28 @@ const sampleEvidence: EvidenceItem[] = [
   },
 ];
 
+// Hardcoded demo canvases for dashboard
+export const demoCanvases: BusinessCanvas[] = [
+  {
+    id: "1",
+    title: { value: "Market Entry Strategy", evidence: [], confidence: 0.9 },
+    problemStatement: { value: "How can we enter the US market?", evidence: [], confidence: 0.8 },
+    createdAt: now,
+    updatedAt: now,
+    bmc_result: {},
+    fields: [],
+  },
+  {
+    id: "2",
+    title: { value: "Product Launch Plan", evidence: [], confidence: 0.9 },
+    problemStatement: { value: "Steps to launch our new app", evidence: [], confidence: 0.8 },
+    createdAt: now,
+    updatedAt: now,
+    bmc_result: {},
+    fields: [],
+  },
+];
+
 function field<T>(value: T, opts?: { evidence?: EvidenceItem[]; confidence?: number }): CanvasField<T> {
   return {
     value,
@@ -280,4 +302,3 @@ export function getDemoCanvas(id: string = DEMO_CANVAS_ID): BusinessCanvas {
   return canvas as BusinessCanvas;
 }
 
-export const demoCanvases: BusinessCanvas[] = [getDemoCanvas(DEMO_CANVAS_ID)];
