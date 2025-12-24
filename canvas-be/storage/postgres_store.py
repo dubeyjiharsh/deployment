@@ -3,13 +3,41 @@ import uuid
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from utils.db_utils import get_db_connection, get_db_cursor
-
+ 
 class PostgresStore:
     """PostgreSQL storage for canvas sessions"""
-    
+ 
     def __init__(self):
         pass
-    
+ 
+    def update_canvas_name(self, canvas_id: str, new_name: str) -> bool:
+        """
+        Update the name (title) of a canvas in the canvas table
+        Args:
+            canvas_id: Canvas UUID
+            new_name: New title for the canvas
+        Returns:
+            True if successful
+        """
+        conn = get_db_connection()
+        cur = get_db_cursor(conn)
+        try:
+            cur.execute(
+                """
+                UPDATE canvas
+                SET name = %s
+                WHERE canvas_id = %s
+                """,
+                (new_name, canvas_id)
+            )
+            conn.commit()
+            return cur.rowcount > 0
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Failed to update canvas name: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
     # ==================== CANVAS TABLE OPERATIONS ====================
     
     def create_canvas(
@@ -40,7 +68,7 @@ class PostgresStore:
             cur.execute(
                 """
                 INSERT INTO canvas (
-                    canvas_id, name, status, assistant_id, thread_id, 
+                    canvas_id, name, status, assistant_id, thread_id,
                     file_ids, conversation_metadata
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -83,7 +111,7 @@ class PostgresStore:
         try:
             cur.execute(
                 """
-                SELECT canvas_id, name, status, assistant_id, thread_id, 
+                SELECT canvas_id, name, status, assistant_id, thread_id,
                        file_ids, conversation_metadata, created_at, updated_at
                 FROM canvas
                 WHERE canvas_id = %s
@@ -312,15 +340,15 @@ class PostgresStore:
                 cur.execute(
                     """
                     INSERT INTO canvas_fields (
-                        canvas_id, title, problem_statement, objectives, kpis, 
-                        success_criteria, key_features, relevant_facts, risks, 
-                        assumptions, non_functional_requirements, use_cases, 
+                        canvas_id, title, problem_statement, objectives, kpis,
+                        success_criteria, key_features, relevant_facts, risks,
+                        assumptions, non_functional_requirements, use_cases,
                         governance, tags
                     )
                     VALUES (
-                        %(canvas_id)s, %(title)s, %(problem_statement)s, %(objectives)s, 
-                        %(kpis)s, %(success_criteria)s, %(key_features)s, %(relevant_facts)s, 
-                        %(risks)s, %(assumptions)s, %(non_functional_requirements)s, 
+                        %(canvas_id)s, %(title)s, %(problem_statement)s, %(objectives)s,
+                        %(kpis)s, %(success_criteria)s, %(key_features)s, %(relevant_facts)s,
+                        %(risks)s, %(assumptions)s, %(non_functional_requirements)s,
                         %(use_cases)s, %(governance)s, %(tags)s
                     )
                     RETURNING id
@@ -394,6 +422,6 @@ class PostgresStore:
         finally:
             cur.close()
             conn.close()
-
+ 
 # Global instance
 postgres_store = PostgresStore()
