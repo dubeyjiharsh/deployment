@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canvas-be-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canvas-be
+  template:
+    metadata:
+      labels:
+        app: canvas-be
+    spec:
+      containers:
+      - name: canvas-be
+        image: canvas-be:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8010
+        envFrom:
+        - secretRef:
+            name: canvas-be-env

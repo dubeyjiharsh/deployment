@@ -1,0 +1,141 @@
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Form, File, UploadFile
+from models.schemas import (
+    MessageResponse,
+    ConversationHistoryResponse
+)
+from services.assistant_service import AssistantService
+from services.file_service import FileService
+from storage.postgres_store import postgres_store
+from utils.json_parser import validate_canvas_structure
+
+router = APIRouter(prefix="/api/canvas", tags=["Chat Interface"])
+
+# Initialize services
+assistant_service = AssistantService()
+file_service = FileService()
+
+@router.post("/{canvas_id}/message", response_model=MessageResponse)
+async def send_message(
+    canvas_id: str,
+    message: str = Form(..., description="User message or problem statement"),
+    files: Optional[List[UploadFile]] = File(None, description="Optional files for context")
+):
+    """
+    Send a message to the canvas conversation
+    
+    Args:
+        canvas_id: The canvas session UUID
+        message: User's message or problem statement
+        files: Optional files to upload for context
+    
+    Returns:
+        chat_response: Response to display in chat interface
+        canvas_json: Updated business model canvas JSON
+        conversation_history: Full conversation history
+    """
+    try:
+        # Verify canvas exists
+        canvas = postgres_store.get_canvas(canvas_id)
+        if not canvas:
+            raise HTTPException(status_code=404, detail="Canvas session not found")
+        
+        # Check if this is the first message (no conversation history yet)
+        history = assistant_service.get_conversation_history(canvas["thread_id"])
+        is_first_message = len(history) == 0
+        
+        # Upload files if provided
+        new_file_ids = []
+        if files:
+            new_file_ids = await file_service.upload_files(files)
+            # Add to database
+            for file_id in new_file_ids:
+                postgres_store.add_file_to_canvas(canvas_id, file_id)
+        
+        # Get all file IDs for this canvas
+        updated_canvas = postgres_store.get_canvas(canvas_id)
+        all_file_ids = updated_canvas["file_ids"]
+        
+        # Send message and get response
+        chat_response, canvas_json = assistant_service.send_message(
+            thread_id=canvas["thread_id"],
+            assistant_id=canvas["assistant_id"],
+            message=message,
+            file_ids=all_file_ids if all_file_ids else None,
+            is_first_message=is_first_message
+        )
+        
+        # Validate canvas structure
+        is_valid, errors = validate_canvas_structure(canvas_json)
+        if not is_valid:
+            print(f"Warning: Canvas validation errors: {errors}")
+        
+        # Save canvas fields to database
+        try:
+            # Update the canvas name in the canvas table if the title has changed
+            new_title = canvas_json.get("Title")
+            if new_title and new_title != canvas["name"]:
+                postgres_store.update_canvas_name(canvas_id, new_title)
+            postgres_store.upsert_canvas_fields(canvas_id, canvas_json)
+            # update status from created to drafted
+            if canvas["status"] == "created":
+                postgres_store.update_status(canvas_id)
+        except Exception as e:
+            print(f"Warning: Failed to save canvas fields: {str(e)}")
+            # Continue execution - we still want to return the response
+        
+        # Get updated conversation history
+        updated_history = assistant_service.get_conversation_history(canvas["thread_id"])
+        
+        return MessageResponse(
+            canvas_id=canvas_id,
+            chat_response=chat_response,
+            canvas_json=canvas_json,
+            conversation_history=updated_history
+        )
+    
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Failed to parse response: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process message: {str(e)}"
+        )
+
+@router.get("/{canvas_id}/history", response_model=ConversationHistoryResponse)
+async def get_conversation_history(canvas_id: str):
+    """
+    Get the full conversation history for a canvas session
+    
+    Args:
+        canvas_id: The canvas session UUID
+    
+    Returns:
+        Full conversation history with roles and content
+    """
+    try:
+        # Verify canvas exists
+        canvas = postgres_store.get_canvas(canvas_id)
+        if not canvas:
+            raise HTTPException(status_code=404, detail="Canvas session not found")
+        
+        # Get conversation history
+        history = assistant_service.get_conversation_history(canvas["thread_id"])
+        
+        return ConversationHistoryResponse(
+            canvas_id=canvas_id,
+            history=history
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve conversation history: {str(e)}"
+        )
