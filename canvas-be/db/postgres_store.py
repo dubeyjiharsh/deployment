@@ -1,7 +1,6 @@
 import json
 import uuid
 from typing import Dict, Any, List, Optional
-from datetime import datetime
 from utils.db_utils import get_db_connection, get_db_cursor
  
 class PostgresStore:
