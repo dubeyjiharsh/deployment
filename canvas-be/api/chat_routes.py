@@ -72,6 +72,10 @@ async def send_message(
         
         # Save canvas fields to database
         try:
+            # Update the canvas name in the canvas table if the title has changed
+            new_title = canvas_json.get("Title")
+            if new_title and new_title != canvas["name"]:
+                postgres_store.update_canvas_name(canvas_id, new_title)
             postgres_store.upsert_canvas_fields(canvas_id, canvas_json)
             # update status from created to drafted
             if canvas["status"] == "created":
