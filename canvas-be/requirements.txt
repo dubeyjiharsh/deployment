@@ -5,3 +5,4 @@ openai
 pydantic
 python-multipart
 aiofiles
+psycopg2-binary

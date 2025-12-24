@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from api import canvas_routes, chat_routes
+import sys
 
 # Ignore deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -29,8 +30,17 @@ app.include_router(canvas_routes.router)
 app.include_router(chat_routes.router)
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])
+        except ValueError:
+            print(f"Invalid port '{sys.argv[1]}', using default port 8025")
+            port = 8025
+    else:
+        port = 8025
+
     uvicorn.run(
         app,
-        host=settings.HOST,
-        port=settings.PORT,
+        host="0.0.0.0",
+        port=port,
     )
