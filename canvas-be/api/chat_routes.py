@@ -6,7 +6,7 @@ from models.schemas import (
 )
 from services.assistant_service import AssistantService
 from services.file_service import FileService
-from storage.postgres_store import postgres_store
+from db.postgres_store import postgres_store
 from utils.json_parser import validate_canvas_structure
 
 router = APIRouter(prefix="/api/canvas", tags=["Chat Interface"])
