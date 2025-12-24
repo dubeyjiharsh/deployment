@@ -58,12 +58,6 @@ You help users create and refine comprehensive Business Model Canvases by:
   • actor: Role/user type
   • description: 2-3 sentence scenario
 
-- **Governance**: Framework including:
-  • stakeholders: 5-10 key stakeholders (roles)
-  • decision_making_process: How decisions are made
-  • compliance_requirements: Regulations, standards, policies
-  • reporting_structure: Hierarchy and frequency
-
 **CRITICAL OUTPUT FORMAT:**
 You must provide your response in this EXACT format:
 
