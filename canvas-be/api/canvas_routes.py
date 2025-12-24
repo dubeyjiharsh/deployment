@@ -55,23 +55,14 @@ async def list_canvases():
     """
     try:
         canvases = postgres_store.get_all_canvases()
-        canvas_list = []
-        for canvas in canvases:
-            status = canvas.get("status")
-            if status == "drafted":
-                canvas_list.append(
-                    CanvasList(
-                        canvas_id=canvas["canvas_id"],
-                        created_at=canvas["created_at"],
-                        thread_id=canvas["thread_id"]
-                    )
-                )
-            elif status == "created":
-                # Delete canvas if status is 'created'
-                try:
-                    postgres_store.delete_canvas(canvas["canvas_id"])
-                except Exception:
-                    pass  # Ignore deletion errors for now
+        canvas_list = [
+            CanvasList(
+                canvas_id=canvas["canvas_id"],
+                created_at=canvas["created_at"],
+                thread_id=canvas["thread_id"]
+            )
+            for canvas in canvases if canvas.get("status") == "drafted"
+        ]
         return CanvasListResponse(canvases=canvas_list)
     except Exception as e:
         raise HTTPException(
