@@ -90,23 +90,12 @@ BMC_SCHEMA = {
                 "required": ["use_case", "actor", "description"]
             },
             "description": "Primary use cases"
-        },
-        "Governance": {
-            "type": "object",
-            "properties": {
-                "stakeholders": {"type": "array", "items": {"type": "string"}},
-                "decision_making_process": {"type": "string"},
-                "compliance_requirements": {"type": "array", "items": {"type": "string"}},
-                "reporting_structure": {"type": "string"}
-            },
-            "required": ["stakeholders", "decision_making_process", "compliance_requirements", "reporting_structure"],
-            "description": "Governance framework"
         }
     },
     "required": [
         "Title", "Problem Statement", "Objectives", "KPIs", 
         "Success Criteria", "Key Features", "Risks", "Assumptions", 
-        "Non Functional Requirements", "Use Cases", "Governance"
+        "Non Functional Requirements", "Use Cases"
     ]
 }
 
