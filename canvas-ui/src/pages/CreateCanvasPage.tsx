@@ -42,28 +42,20 @@ export function CreateCanvasPage(): React.ReactElement {
       return;
     }
 
-    // For first message, require file
-    if (chat.length === 0 && !file) {
-      alert("Please upload a file for the first message.");
-      return;
-    }
-
     setChat((prev) => [...prev, {role: "user", content: idea}]);
     setIsLoading(true);
 
     try {
       let result;
-      // Always use canvasId from state/sessionStorage
-      let id = canvasId;
+      // Get canvas ID from state or sessionStorage
+      let id = canvasId || sessionStorage.getItem("canvasId");
+      
+      // This should not happen with auto-creation, but just in case
       if (!id) {
-        id = sessionStorage.getItem("canvasId");
-        if (id) setCanvasId(id);
-      }
-      if (!id) {
-        setChat((prev) => [...prev, {role: "assistant", content: "No canvas ID found. Please click 'Create New' first."}]);
-        setIsLoading(false);
-        setIdea("");
-        return;
+        id = `canvas_${Date.now()}`;
+        sessionStorage.setItem("canvasId", id);
+        setCanvasId(id);
+        console.log("Emergency canvas ID creation:", id);
       }
       
       // Log request details for debugging
@@ -105,12 +97,16 @@ export function CreateCanvasPage(): React.ReactElement {
 
       // Persist canvas JSON and id if provided
       if (response.data?.canvas_json) {
+        // Store as canvasJson for CanvasPreviewPage to read
         sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
       }
       if (response.data?.canvas_id) {
         sessionStorage.setItem("canvasId", response.data.canvas_id);
         setCanvasId(response.data.canvas_id);
       }
+      
+      // Clear file after successful submission (user can attach new file for next message)
+      setFile(null);
     } catch (error) {
       let errorMessage = "Failed to generate the business canvas. Please try again.";
       if (axios.isAxiosError(error)) {
@@ -168,9 +164,117 @@ export function CreateCanvasPage(): React.ReactElement {
     setFileUploaded(false);
   };
 
+  const handlePreview = () => {
+    const id = canvasId || sessionStorage.getItem("canvasId");
+    if (!id) {
+      alert("No canvas ID found. Please create a canvas first.");
+      return;
+    }
+    // Save current chat state before navigating
+    sessionStorage.setItem("chatState", JSON.stringify(chat));
+    window.location.hash = `/canvas-preview/${encodeURIComponent(id)}`;
+  };
+
+  const handleCreateNew = async () => {
+    // Clear all canvas-related data
+    sessionStorage.removeItem("canvasId");
+    sessionStorage.removeItem("canvasJson");
+    sessionStorage.removeItem("chatState");
+    sessionStorage.removeItem("canvasTitle");
+    
+    // Reset state
+    setChat([]);
+    setFile(null);
+    setFileUploaded(false);
+    setIdea("");
+    
+    try {
+      // Create a new canvas by calling the backend
+      const response = await axios.post(
+        `http://0.0.0.0:8020/api/canvas`,
+        {},
+        {
+          headers: {
+            "Authorization": `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          },
+        }
+      );
+      
+      const newCanvasId = response.data?.canvas_id || `canvas_${Date.now()}`;
+      sessionStorage.setItem("canvasId", newCanvasId);
+      setCanvasId(newCanvasId);
+      
+      console.log("Created new canvas with ID:", newCanvasId);
+    } catch (error) {
+      // If backend doesn't have create endpoint, generate ID locally
+      const newCanvasId = `canvas_${Date.now()}`;
+      sessionStorage.setItem("canvasId", newCanvasId);
+      setCanvasId(newCanvasId);
+      console.log("Generated new canvas ID locally:", newCanvasId);
+    }
+  };
+
+  const handleBack = () => {
+    window.history.back();
+  };
+
+  React.useEffect(() => {
+    // Restore chat state when coming back from preview
+    const savedChat = sessionStorage.getItem("chatState");
+    if (savedChat) {
+      try {
+        const parsedChat = JSON.parse(savedChat);
+        if (Array.isArray(parsedChat) && parsedChat.length > 0) {
+          setChat(parsedChat);
+        }
+      } catch (error) {
+        console.error("Error restoring chat state:", error);
+      }
+    }
+    
+    // Ensure canvas ID is set from sessionStorage if available, or create new one
+    const savedCanvasId = sessionStorage.getItem("canvasId");
+    if (savedCanvasId) {
+      setCanvasId(savedCanvasId);
+      console.log("Restored canvas ID:", savedCanvasId);
+    } else {
+      // Create initial canvas ID on first load
+      const initialCanvasId = `canvas_${Date.now()}`;
+      sessionStorage.setItem("canvasId", initialCanvasId);
+      setCanvasId(initialCanvasId);
+      console.log("Created initial canvas ID:", initialCanvasId);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="p-6 flex flex-col justify-between w-full max-w-3xl">
+        {/* Header with Back and Create New buttons */}
+        <div className="absolute top-20 left-0 right-0 flex justify-between items-center px-8 max-w-6xl mx-auto">
+          {canvasId ? (
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back
+            </button>
+          ) : (
+            <div></div>
+          )}
+          <button
+            onClick={handleCreateNew}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create New
+          </button>
+        </div>
+
         <div className="max-w-3xl space-y-4">
           {!chat.length && (
             <div>
@@ -280,7 +384,7 @@ export function CreateCanvasPage(): React.ReactElement {
                   <button
                     className="p-2 bg-blue-500 border border-blue-500 rounded-full shadow disabled:opacity-50 hover:bg-blue-600 transition-colors rotate-90"
                     onClick={handleSubmit}
-                    disabled={isLoading || !idea || (chat.length === 0 && !file)}
+                    disabled={isLoading || !idea}
                     aria-label="Send"
                   >
                     {isLoading ? (
@@ -309,7 +413,7 @@ export function CreateCanvasPage(): React.ReactElement {
                 aria-label="Preview"
                 tabIndex={0}
                 type="button"
-                onClick={() => { window.location.hash = '/canvas-preview'; }}
+                onClick={handlePreview}
               >
                 <img src="/dist/images/preview.png" alt="Preview" className="h-6 w-6" draggable="false" />
               </button>

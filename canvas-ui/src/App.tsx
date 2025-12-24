@@ -1,3 +1,4 @@
+
 // import * as React from "react";
 
 // import { ThemeProvider } from "@/components/theme-provider";
@@ -10,18 +11,28 @@
 // import { DashboardPage } from "@/src/pages/DashboardPage";
 // import { CreateCanvasPage } from "@/src/pages/CreateCanvasPage";
 // import { CanvasPage } from "@/src/pages/CanvasPage";
+// import { CanvasResultPage } from "@/src/pages/CanvasResultPage";
 // import { UserManagementPage } from "@/src/pages/UserManagementPage";
 // import { NotFoundPage } from "@/src/pages/NotFoundPage";
-// import { CanvasResultPage } from "./pages/CanvasResultPage";
+// import { CanvasPreviewPage } from "@/src/pages/CanvasPreviewPage";
 
 // export function App(): React.ReactElement {
 //   const path = useHashPath();
 
 //   let content: React.ReactNode = <NotFoundPage />;
-//   if (path === "/" || path === "") content = <DashboardPage />;
-//   else if (path === "/canvas/create") content = <CreateCanvasPage />;
-//   else if (path.startsWith("/canvas/")) content = <CanvasPage />;
-//   else if (path === "/admin") content = <UserManagementPage />;
+//   if (path === "/" || path === "") {
+//     content = <DashboardPage />;
+//   } else if (path === "/canvas/create") {
+//     content = <CreateCanvasPage />;
+//   } else if (path === "/canvas/result") {
+//     content = <CanvasResultPage />;
+//   } else if (path === "/canvas-preview") {
+//     content = <CanvasPreviewPage />;
+//   } else if (path.startsWith("/canvas/")) {
+//     content = <CanvasPage />;
+//   } else if (path === "/admin") {
+//     content = <UserManagementPage />;
+//   }
 
 //   return (
 //     <ThemeProvider
@@ -53,6 +64,8 @@
 //   );
 // }
 
+
+
 import * as React from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -68,6 +81,7 @@ import { CanvasPage } from "@/src/pages/CanvasPage";
 import { CanvasResultPage } from "@/src/pages/CanvasResultPage";
 import { UserManagementPage } from "@/src/pages/UserManagementPage";
 import { NotFoundPage } from "@/src/pages/NotFoundPage";
+import { CanvasPreviewPage } from "@/src/pages/CanvasPreviewPage";
 
 export function App(): React.ReactElement {
   const path = useHashPath();
@@ -79,8 +93,8 @@ export function App(): React.ReactElement {
     content = <CreateCanvasPage />;
   } else if (path === "/canvas/result") {
     content = <CanvasResultPage />;
-  } else if (path === "/canvas-preview") {
-    const { CanvasPreviewPage } = require("@/src/pages/CanvasPreviewPage");
+  } else if (path === "/canvas-preview" || path.startsWith("/canvas-preview/")) {
+    // Handle both /canvas-preview and /canvas-preview/:id
     content = <CanvasPreviewPage />;
   } else if (path.startsWith("/canvas/")) {
     content = <CanvasPage />;
