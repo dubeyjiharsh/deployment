@@ -18,7 +18,7 @@ class Settings:
     DB_PASSWORD = os.getenv("DB_PASSWORD")
     
     # Application Settings
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS") != "*" else ["*"]
     
     # File Upload Settings
     UPLOAD_DIR = "./temp_uploads"
