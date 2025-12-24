@@ -76,7 +76,7 @@ def validate_canvas_structure(canvas_data: Dict[str, Any]) -> Tuple[bool, list]:
     required_fields = [
         "Title", "Problem Statement", "Objectives", "KPIs", 
         "Success Criteria", "Key Features", "Risks", "Assumptions", 
-        "Non Functional Requirements", "Use Cases", "Governance"
+        "Non Functional Requirements", "Use Cases"
     ]
     
     # Check for required fields
@@ -98,7 +98,7 @@ def validate_canvas_structure(canvas_data: Dict[str, Any]) -> Tuple[bool, list]:
         if field in canvas_data and not isinstance(canvas_data[field], list):
             errors.append(f"'{field}' must be an array")
     
-    if "Governance" in canvas_data and not isinstance(canvas_data["Governance"], dict):
-        errors.append("'Governance' must be an object")
+#    if "Governance" in canvas_data and not isinstance(canvas_data["Governance"], dict):
+#        errors.append("'Governance' must be an object")
     
     return len(errors) == 0, errors
