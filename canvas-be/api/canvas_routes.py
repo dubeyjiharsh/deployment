@@ -5,7 +5,7 @@ from models.schemas import (
     CanvasList
 )
 from services.assistant_service import AssistantService
-from storage.postgres_store import postgres_store
+from db.postgres_store import postgres_store
 from typing import Dict, Any
 
 router = APIRouter(prefix="/api/canvas", tags=["Canvas Management"])
