@@ -73,13 +73,15 @@ export function App(): React.ReactElement {
   const path = useHashPath();
 
   let content: React.ReactNode = <NotFoundPage />;
-  
   if (path === "/" || path === "") {
     content = <DashboardPage />;
   } else if (path === "/canvas/create") {
     content = <CreateCanvasPage />;
   } else if (path === "/canvas/result") {
     content = <CanvasResultPage />;
+  } else if (path === "/canvas-preview") {
+    const { CanvasPreviewPage } = require("@/src/pages/CanvasPreviewPage");
+    content = <CanvasPreviewPage />;
   } else if (path.startsWith("/canvas/")) {
     content = <CanvasPage />;
   } else if (path === "/admin") {

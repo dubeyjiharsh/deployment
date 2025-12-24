@@ -22,7 +22,12 @@ export function CreateCanvasPage(): React.ReactElement {
   // Track if file has been uploaded at least once
   const [fileUploaded, setFileUploaded] = React.useState(false);
   // Store canvas id after creation
-  // Remove canvasId from state, always fetch from sessionStorage for latest value
+  const [canvasId, setCanvasId] = React.useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("canvasId");
+    }
+    return null;
+  });
 
   const handleFileUpload = (files: FileList | null) => {
     if (files && files.length > 0) {
@@ -48,35 +53,110 @@ export function CreateCanvasPage(): React.ReactElement {
 
     try {
       let result;
-      // Always fetch the latest canvasId from sessionStorage
-      const id = typeof window !== "undefined" ? sessionStorage.getItem("canvasId") : null;
+      // Always use canvasId from state/sessionStorage
+      let id = canvasId;
+      if (!id) {
+        id = sessionStorage.getItem("canvasId");
+        if (id) setCanvasId(id);
+      }
       if (!id) {
         setChat((prev) => [...prev, {role: "assistant", content: "No canvas ID found. Please click 'Create New' first."}]);
         setIsLoading(false);
         setIdea("");
         return;
       }
+      
+      // Log request details for debugging
+      console.log("Sending request with:", { canvasId: id, promptLength: idea.length, hasFile: !!file });
+      
       // Always send to /api/canvas/{canvas_id}/message
       const formData = new FormData();
-      formData.append("prompt", idea);
+      formData.append("message", idea);
       if (file) {
-        formData.append("file", file);
+        formData.append("files", file);
+        console.log("File attached:", file.name, file.type, file.size);
       }
+      console.log("*********",id)
+      
       const response = await axios.post(
         `http://0.0.0.0:8020/api/canvas/${id}/message`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${sessionStorage.getItem("authToken") || ""}`,
           },
         }
       );
-      result = response.data;
-      setChat((prev) => [...prev, {role: "assistant", content: result?.output || "No response"}]);
-      sessionStorage.setItem("canvasData", JSON.stringify(result));
+      console.log("Response received:", response.data);
+      result = response.data.conversation_history;
+      // If the API returned a conversation_history array, use it to populate the chat UI.
+      if (Array.isArray(result) && result.length > 0) {
+        const mapped = result.map((m: any) => ({
+          role: m.role || "assistant",
+          content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        }));
+        setChat(mapped);
+      } else if (typeof response.data === "string") {
+        setChat((prev) => [...prev, { role: "assistant", content: response.data }]);
+      } else {
+        setChat((prev) => [...prev, { role: "assistant", content: "No response" }]);
+      }
+
+      // Persist canvas JSON and id if provided
+      if (response.data?.canvas_json) {
+        sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
+      }
+      if (response.data?.canvas_id) {
+        sessionStorage.setItem("canvasId", response.data.canvas_id);
+        setCanvasId(response.data.canvas_id);
+      }
     } catch (error) {
-      setChat((prev) => [...prev, {role: "assistant", content: "Failed to generate the business canvas. Please try again."}]);
-      console.error("Error submitting data:", error);
+      let errorMessage = "Failed to generate the business canvas. Please try again.";
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 402) {
+            errorMessage = `Payment Required (402): ${data?.message || "Your API quota or subscription may have expired. Please contact support."}`;
+          } else if (status === 422) {
+            // Handle validation errors
+            let details = "";
+            if (data?.detail) {
+              if (Array.isArray(data.detail)) {
+                details = data.detail.map((d: any) => {
+                  if (d.msg) return `${d.loc?.join('.')} - ${d.msg}`;
+                  return JSON.stringify(d);
+                }).join("; ");
+              } else {
+                details = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+              }
+            } else if (data?.message) {
+              details = data.message;
+            } else if (data?.errors) {
+              details = typeof data.errors === "string" ? data.errors : JSON.stringify(data.errors);
+            }
+            errorMessage = `Validation Error (422): ${details || "Invalid request data. Check file format and problem statement."}`;
+          } else {
+            errorMessage = `Error ${status}: ${data?.message || data?.detail || JSON.stringify(data) || "Server error"}`;
+          }
+        } else if (error.request) {
+          errorMessage = "Error: No response from server. Check if the backend is running at http://0.0.0.0:8020";
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      console.error("Full error details:", error);
+      console.error("Request payload for debugging:", {
+        idea,
+        fileName: file?.name,
+        fileSize: file?.size,
+        canvasId: canvasId || sessionStorage.getItem("canvasId"),
+      });
+      setChat((prev) => [...prev, {role: "assistant", content: errorMessage}]);
     } finally {
       setIsLoading(false);
       setIdea("");

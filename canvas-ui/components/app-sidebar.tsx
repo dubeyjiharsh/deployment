@@ -32,24 +32,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navMainItems = [
     {
+      title: "Create Canvas",
+      url: "/canvas/create",
+      icon: IconCirclePlusFilled,
+    },
+    // Removed User Management
+    {
       title: "Dashboard",
       url: "/",
       icon: IconDashboard,
+      
     },
-  ];
-  // Handler for creating a new canvas (calls API, stores id, navigates)
-  const handleCreateNewCanvas = async () => {
-    try {
-      const res = await fetch("http://0.0.0.0:8020/api/canvas/create", { method: "POST" });
-      const data = await res.json();
-      if (data?.canvas_id) {
-        sessionStorage.setItem("canvasId", data.canvas_id);
-      }
-    } catch (err) {
-      console.error("Failed to call canvas create API", err);
-    }
-    window.location.hash = linkTo("/canvas/create");
-  };
+  ]
 
   // Get canvas title from sessionStorage
   const [canvasTitle, setCanvasTitle] = React.useState<string | null>(null);
@@ -88,21 +82,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupContent className="px-1.5 md:px-0">
             <SidebarMenu>
-              {/* Create New Canvas button */}
-              <SidebarMenuItem key="create-canvas">
-                <SidebarMenuButton
-                  tooltip="Create Canvas"
-                  isActive={pathname === "/canvas/create"}
-                  className="px-2.5 md:px-2"
-                  onClick={handleCreateNewCanvas}
-                >
-                  <IconCirclePlusFilled />
-                  <span className="group-data-[collapsible=icon]:hidden">Create Canvas</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {/* Other nav items */}
               {navMainItems.map((item) => {
-                const isActive = pathname === item.url;
+                const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
@@ -117,7 +98,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
+                )
               })}
             </SidebarMenu>
           </SidebarGroupContent>
