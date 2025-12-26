@@ -33,13 +33,24 @@ jobs:
         with:
           languages: python
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      # - name: Autobuild
+      #   uses: github/codeql-action/autobuild@v3
 
-      - name: Perform CodeQL Analysis
+      # - name: Perform CodeQL Analysis
+      #   uses: github/codeql-action/analyze@v3
+      #   with:
+      #     category: "/language:python"
+      - name: Analyze (do NOT upload to Code Scanning)
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:python"
+          upload: false
+          output: codeql-results
+
+      - name: Upload SARIF as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results/**/*.sarif
 
   docker_build_push:
     name: Docker Build & Push (GHCR)
