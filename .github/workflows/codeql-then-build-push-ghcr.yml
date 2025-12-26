@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: codeql
     # Only push images on push (avoid fork PR permission issues)
-    if: github.event_name == 'push'
+    if: always()
 
     steps:
       - name: Checkout
