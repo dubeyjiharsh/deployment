@@ -1,24 +1,49 @@
 import * as React from "react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { demoCanvases } from "@/lib/demo-canvas";
 import { linkTo } from "@/lib/router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
+import axios from "axios";
+
 
 
 export function DashboardPage(): React.ReactElement {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>("newest");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<'grid' | 'list'>("grid");
+  const [canvases, setCanvases] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCanvases = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          },
+        });
+        setCanvases(response.data.canvases || []);
+        console.log('Fetched canvases:', response.data.canvases);
+      } catch (err) {
+        setError("Failed to load canvases");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCanvases();
+  }, []);
 
   // Sort and filter canvases
-  const canvases = useMemo(() => {
-    let filtered = demoCanvases.filter((c) => {
-      const title = c.title?.value?.toLowerCase?.() || "";
+  const filteredCanvases = useMemo(() => {
+    let filtered = canvases.filter((c) => {
+      const title = c.title?.value?.toLowerCase?.() || c.title?.toLowerCase?.() || "";
       return title.includes(search.toLowerCase());
     });
     filtered = filtered.sort((a, b) => {
@@ -27,7 +52,7 @@ export function DashboardPage(): React.ReactElement {
       return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
     });
     return filtered;
-  }, [search, sortOrder]);
+  }, [canvases, search, sortOrder]);
 
   return (
     <div className="p-6">
@@ -98,29 +123,35 @@ export function DashboardPage(): React.ReactElement {
           </div>
         </div>
         <Separator />
-        <div className={view === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4' : 'flex flex-col gap-4'}>
-          {canvases.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">No canvases found.</div>
-          )}
-          {canvases.map((canvas) => (
-            <a key={canvas.id} href={linkTo(`/canvas/${canvas.id}`)} className="block">
-              <Card className="border cursor-pointer transition-colors hover:bg-muted/30">
-                <CardHeader>
-                  <CardTitle className="text-base text-blue-500">{canvas?.title?.value || "Demo Canvas"}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {canvas?.problemStatement?.value || "Click to open the demo canvas."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between gap-3">
-                  <div className="text-xs text-muted-foreground">
-                    {canvas.createdAt ? formatDistanceToNow(new Date(canvas.createdAt), { addSuffix: true }) : ""}
-                  </div>
-                  <div className="text-sm text-primary">Open canvas</div>
-                </CardContent>
-              </Card>
-            </a>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center text-muted-foreground py-8">Loading canvases...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">{error}</div>
+        ) : (
+          <div className={view === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4' : 'flex flex-col gap-4'}>
+            {filteredCanvases.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">No canvases found.</div>
+            )}
+            {filteredCanvases.map((canvas) => (
+              <a key={canvas.id} href={linkTo(`/canvas/${canvas.id}`)} className="block">
+                <Card className="border cursor-pointer transition-colors hover:bg-muted/30">
+                  <CardHeader>
+                    <CardTitle className="text-base text-blue-500">{canvas?.title?.value || canvas?.title || "Untitled Canvas"} <span className="text-xs text-gray-400">{canvas.canvas_id}</span></CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {canvas?.problemStatement?.value || canvas?.problemStatement || "Canvas ID: " + canvas.canvas_id}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between gap-3">
+                    <div className="text-xs text-muted-foreground">
+                      {canvas.createdAt ? formatDistanceToNow(new Date(canvas.createdAt), { addSuffix: true }) : ""}
+                    </div>
+                    <div className="text-sm text-primary">Open canvas</div>
+                  </CardContent>
+                </Card>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
