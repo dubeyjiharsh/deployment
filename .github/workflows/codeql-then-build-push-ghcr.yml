@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   security-events: write
   packages: write
 
@@ -22,8 +23,6 @@ jobs:
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
-
-    # CodeQL needs security-events:write (set at top-level permissions)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,12 +30,8 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          # For Python repos:
           languages: python
-          # Optional: customize queries (default is "security-and-quality")
-          # queries: security-and-quality
 
-      # For Python, autobuild is usually a no-op, but it's fine to keep it simple.
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
@@ -49,6 +44,8 @@ jobs:
     name: Docker Build & Push (GHCR)
     runs-on: ubuntu-latest
     needs: codeql
+    # Only push images on push (avoid fork PR permission issues)
+    if: github.event_name == 'push'
 
     steps:
       - name: Checkout
