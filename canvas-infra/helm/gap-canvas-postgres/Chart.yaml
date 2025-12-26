@@ -1,0 +1,28 @@
+# Helm Chart metadata for the GAP Canvas PostgreSQL release.
+
+# This file follows Helm's Chart.yaml schema. The fields below are used
+# by Helm and by CI/CD pipelines to identify the chart name, version,
+# and the upstream application version (Postgres).
+
+# Notes:
+# - `version` is the chart version (bump when chart templates or defaults change).
+# - `appVersion` is the upstream application version (the Postgres major/minor version).
+# See https://helm.sh/docs/topics/charts/ for more details.
+
+# Helm Chart API version (v2 required for Helm 3+)
+apiVersion: v2
+
+# Chart name (used when packaging/installing the chart)
+name: gap-canvas-postgres
+
+# Short description of the chart purpose
+description: PostgreSQL (single instance) for GAP Canvas with init schema
+
+# Chart type: 'application' for deployable apps, 'library' for reusable chart code
+type: application
+
+# Chart semantic version. Increment when chart metadata, templates, or defaults change.
+version: 0.1.0
+
+# Upstream application version (Postgres major version this chart targets)
+appVersion: "16"

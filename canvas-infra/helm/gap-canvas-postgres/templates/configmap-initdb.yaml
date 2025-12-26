@@ -1,0 +1,21 @@
+## ConfigMap containing initialization SQL/scripts for PostgreSQL.
+## Files mounted from this ConfigMap to `/docker-entrypoint-initdb.d` are executed
+## by the official Postgres image only when the database is initialized for the first time.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # ConfigMap name is release-scoped via the fullname helper
+  name: {{ include "gapCanvasPostgres.fullname" . }}-initdb
+  labels:
+    {{- include "gapCanvasPostgres.labels" . | nindent 4 }}
+data:
+  # The key becomes the filename inside the mount. Keep a numeric prefix
+  # (01_, 02_) to control execution order of multiple init scripts.
+  01_init.sql: |
+{{ .Files.Get "sql/01_init.sql" | indent 4 }}
+
+# Tips:
+# - Place additional SQL or shell init scripts in the chart's `sql/` directory
+#   and reference them here (e.g. 02_schema.sql).
+# - Init scripts run only on the first start when the data PVC is empty.

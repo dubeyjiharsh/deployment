@@ -1,0 +1,41 @@
+# Default values for gap-canvas-postgres Helm chart.
+# In production: do NOT store real passwords in Git. Use ExternalSecrets/SealedSecrets/Vault etc.
+
+image:
+  repository: postgres
+  tag: "16"
+  pullPolicy: IfNotPresent
+
+postgres:
+  existingSecret:
+    enabled: true
+    name: canvas-db-secret
+
+service:
+  type: ClusterIP
+  port: 5432
+
+persistence:
+  enabled: true
+  size: 20Gi
+  # Leave empty to use the cluster default StorageClass
+  storageClassName: ""
+
+# Pod security context (official postgres image runs as 999 in many distros)
+securityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+
+# Resource requests/limits (fill in for prod)
+resources: {}
+#  requests:
+#    cpu: "250m"
+#    memory: "512Mi"
+#  limits:
+#    cpu: "1"
+#    memory: "2Gi"
+
+# Optional network policy to restrict access to Postgres
+networkPolicy:
+  enabled: false

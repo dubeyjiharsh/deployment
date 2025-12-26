@@ -1,0 +1,36 @@
+{{- if .Values.networkPolicy.enabled -}}
+# NetworkPolicy to restrict inbound traffic to the Postgres pods.
+# Enable by setting `networkPolicy.enabled: true` in values.yaml.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  # Name scoped to the release; use helper to keep consistent naming.
+  name: {{ include "gapCanvasPostgres.fullname" . }}
+  labels:
+    {{- include "gapCanvasPostgres.labels" . | nindent 4 }}
+spec:
+  # Select the Postgres Pod(s) managed by this chart
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gapCanvasPostgres.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  # Only control inbound traffic to the selected pods
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # NOTE: currently allows traffic from any namespace (empty selector).
+        # This is permissive to avoid accidental lockout during development.
+        # For production, replace with stricter selectors, for example:
+        # - namespaceSelector:
+        #     matchLabels:
+        #       app.kubernetes.io/name: canvas
+        # - podSelector:
+        #     matchLabels:
+        #       app.kubernetes.io/name: gap-backend
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          # Use the chart service port to restrict allowed port for Postgres
+          port: {{ .Values.service.port }}
+{{- end -}}
