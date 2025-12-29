@@ -59,7 +59,10 @@ async def list_canvases():
             CanvasList(
                 canvas_id=canvas["canvas_id"],
                 created_at=canvas["created_at"],
-                thread_id=canvas["thread_id"]
+                thread_id=canvas["thread_id"],
+                title=canvas["name"],
+                updated_at=canvas["updated_at"],
+                problem_statement=canvas["problem_statement"]
             )
             for canvas in canvases if canvas.get("status") == "drafted"
         ]

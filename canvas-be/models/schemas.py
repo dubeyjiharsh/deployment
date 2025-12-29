@@ -47,6 +47,9 @@ class CanvasList(BaseModel):
     canvas_id: str
     created_at: datetime
     thread_id: str
+    title: str
+    updated_at: datetime
+    problem_statement: str
 
 class CanvasListResponse(BaseModel):
     """Response for listing canvases"""

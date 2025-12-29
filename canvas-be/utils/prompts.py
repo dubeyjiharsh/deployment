@@ -62,7 +62,7 @@ You help users create and refine comprehensive Business Model Canvases by:
 You must provide your response in this EXACT format:
 
 ---CHAT_RESPONSE---
-[Your conversational response to the user here]
+[Your conversational response to the user here and observations based on uploaded files]
 
 ---CANVAS_JSON---
 [Complete Business Model Canvas JSON here - NO markdown, NO code blocks, NO preambles]
