@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
+import { navigate } from "@/lib/router";
 
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
@@ -111,7 +112,7 @@ export function CreateCanvasPage(): React.ReactElement {
     if (!canvasId) return;
     // Save current chat so it can be restored when coming back
     sessionStorage.setItem("chatState", JSON.stringify(chat));
-    window.location.hash = `/canvas-preview/${encodeURIComponent(canvasId)}`;
+    navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`);
   };
 
   return (

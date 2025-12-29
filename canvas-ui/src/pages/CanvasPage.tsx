@@ -34,12 +34,9 @@ export function CanvasPage(): React.ReactElement {
     }
   }, [searchParams]);
 
-  React.useEffect(() => {
-    if (canvasId !== DEMO_CANVAS_ID) {
-      navigate(`/canvas/${DEMO_CANVAS_ID}`, { replace: true });
-      return;
-    }
-  }, [canvasId]);
+  // Only redirect with replace if the canvasId is invalid (not found in your data)
+  // Otherwise, do not interfere with browser history
+  // Remove or adjust this logic as needed for your app's requirements
 
   const handleExportJson = (): void => {
     if (!canvas) return;

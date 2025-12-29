@@ -8,7 +8,8 @@ import {
 } from "@tabler/icons-react"
 
 import { NavUser } from "@/components/nav-user"
-import { linkTo, useHashPath } from "@/lib/router"
+import { linkTo, useHashPath, navigate } from "@/lib/router"
+import axios from "axios"
 import {
   Sidebar,
   SidebarContent,
@@ -45,17 +46,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
   ]
 
-  // Get canvas title from sessionStorage
-  const [canvasTitle, setCanvasTitle] = React.useState<string | null>(null);
+
+  // Live chat/canvas history
+  const [canvases, setCanvases] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch canvases on mount and when storage changes (for live update)
   React.useEffect(() => {
-    setCanvasTitle(sessionStorage.getItem("canvasTitle"));
-    window.addEventListener("storage", () => {
-      setCanvasTitle(sessionStorage.getItem("canvasTitle"));
-    });
+    const fetchCanvases = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          },
+        });
+        setCanvases(response.data.canvases || []);
+      } catch (err) {
+        setError("Failed to load chat history");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCanvases();
+    // Listen for storage changes and custom canvasListUpdated event to update live
+    const onStorage = () => fetchCanvases();
+    const onCanvasListUpdated = () => fetchCanvases();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("canvasListUpdated", onCanvasListUpdated);
     return () => {
-      window.removeEventListener("storage", () => {
-        setCanvasTitle(sessionStorage.getItem("canvasTitle"));
-      });
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("canvasListUpdated", onCanvasListUpdated);
     };
   }, []);
 
@@ -106,28 +129,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="px-2 pt-2 pb-1">
             <div className="bg-gray-300 h-px w-full" />
           </div>
-          {/* Chat history will be rendered here */}
+          {/* Live chat/canvas history */}
           <SidebarGroupContent className="px-1.5 md:px-0 group-data-[collapsible=icon]:hidden">
-            {/* Show canvas title if available */}
-            {canvasTitle ? (
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="block px-3 py-2 rounded bg-blue-100 text-blue-900">
-                  <div className="font-semibold text-sm truncate">{canvasTitle}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 mt-2">
-                {/* Hardcoded chat history samples, only visible when sidebar is open */}
-                <a href="#/canvas/result?chat=1" className="block px-3 py-2 rounded bg-blue-100 text-blue-900 hover:bg-blue-200 transition-colors">
-                  <div className="font-semibold text-sm truncate">Market Entry Strategy</div>
-                  <div className="text-xs text-blue-700 truncate">How can we enter the US market?</div>
-                </a>
-                <a href="#/canvas/result?chat=2" className="block px-3 py-2 rounded bg-blue-100 text-blue-900 hover:bg-blue-200 transition-colors">
-                  <div className="font-semibold text-sm truncate">Product Launch Plan</div>
-                  <div className="text-xs text-blue-700 truncate">Steps to launch our new app</div>
-                </a>
-              </div>
-            )}
+            <div className="flex flex-col gap-2 mt-2">
+              {loading ? (
+                <div className="text-xs text-muted-foreground px-3">Loading...</div>
+              ) : error ? (
+                <div className="text-xs text-red-500 px-3">{error}</div>
+              ) : canvases.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-3">No chats yet.</div>
+              ) : (
+                canvases.map((canvas) => (
+                  <div
+                    key={canvas.canvas_id}
+                    className="block px-3 py-2 rounded bg-blue-100 text-blue-900 hover:bg-blue-200 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/canvas/${canvas.canvas_id}`)}
+                    title={canvas.title + (canvas.problem_statement ? `: ${canvas.problem_statement}` : "")}
+                  >
+                    <div className="font-semibold text-sm truncate" style={{ maxWidth: '180px' }}>{canvas.title || "Untitled Canvas"}</div>
+                    <div className="text-xs text-blue-700 truncate" style={{ maxWidth: '180px' }}>{canvas.problem_statement || "No problem statement."}</div>
+                  </div>
+                ))
+              )}
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

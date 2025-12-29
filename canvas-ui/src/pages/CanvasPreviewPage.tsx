@@ -1,4 +1,5 @@
 import React from "react";
+import { navigate } from "@/lib/router";
 
 export function CanvasPreviewPage(): React.ReactElement {
   // Extract canvas ID from URL hash (e.g., #/canvas-preview/canvas_123)
@@ -54,7 +55,7 @@ export function CanvasPreviewPage(): React.ReactElement {
             onClick={() => {
               // SET FLAG: Tell CreateCanvasPage to restore the session
               sessionStorage.setItem("isReturningFromPreview", "true");
-              window.location.hash = '/canvas/create';
+              navigate("/canvas/create");
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
           >

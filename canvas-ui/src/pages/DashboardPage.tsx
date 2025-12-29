@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { linkTo } from "@/lib/router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import axios from "axios";
 
 
 export function DashboardPage(): React.ReactElement {
+  const [jsonModalOpen, setJsonModalOpen] = useState(false);
+  const [selectedCanvas, setSelectedCanvas] = useState<any | null>(null);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>("newest");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<'grid' | 'list'>("grid");
@@ -30,6 +33,7 @@ export function DashboardPage(): React.ReactElement {
           },
         });
         setCanvases(response.data.canvases || []);
+        window.dispatchEvent(new Event("canvasListUpdated"));
         console.log('Fetched canvases:', response.data.canvases);
       } catch (err) {
         setError("Failed to load canvases");
@@ -47,8 +51,8 @@ export function DashboardPage(): React.ReactElement {
       return title.includes(search.toLowerCase());
     });
     filtered = filtered.sort((a, b) => {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
       return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
     });
     return filtered;
@@ -133,23 +137,45 @@ export function DashboardPage(): React.ReactElement {
               <div className="text-center text-muted-foreground py-8">No canvases found.</div>
             )}
             {filteredCanvases.map((canvas) => (
-              <a key={canvas.id} href={linkTo(`/canvas/${canvas.id}`)} className="block">
+              <div key={canvas.canvas_id} className="block">
                 <Card className="border cursor-pointer transition-colors hover:bg-muted/30">
                   <CardHeader>
-                    <CardTitle className="text-base text-blue-500">{canvas?.title?.value || canvas?.title || "Untitled Canvas"} <span className="text-xs text-gray-400">{canvas.canvas_id}</span></CardTitle>
+                    <CardTitle className="text-base text-blue-500">{canvas.title || "Untitled Canvas"} <span className="text-xs text-gray-400">{canvas.canvas_id}</span></CardTitle>
                     <CardDescription className="line-clamp-2">
-                      {canvas?.problemStatement?.value || canvas?.problemStatement || "Canvas ID: " + canvas.canvas_id}
+                      {canvas.problem_statement || "Canvas ID: " + canvas.canvas_id}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
-                      {canvas.createdAt ? formatDistanceToNow(new Date(canvas.createdAt), { addSuffix: true }) : ""}
+                      {canvas.created_at ? formatDistanceToNow(new Date(canvas.created_at), { addSuffix: true }) : ""}
                     </div>
-                    <div className="text-sm text-primary">Open canvas</div>
+                    <div
+                      className="text-sm text-primary cursor-pointer underline"
+                      onClick={() => {
+                        setSelectedCanvas(canvas);
+                        setJsonModalOpen(true);
+                      }}
+                    >
+                      Open canvas
+                    </div>
                   </CardContent>
                 </Card>
-              </a>
+              </div>
             ))}
+                {/* Modal for displaying JSON */}
+                <Dialog open={jsonModalOpen} onOpenChange={setJsonModalOpen}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Canvas JSON</DialogTitle>
+                      <DialogDescription>
+                        Below is the JSON output for the selected canvas.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <pre className="overflow-x-auto whitespace-pre-wrap text-xs bg-gray-100 p-4 rounded">
+                      {selectedCanvas ? JSON.stringify(selectedCanvas, null, 2) : ""}
+                    </pre>
+                  </DialogContent>
+                </Dialog>
           </div>
         )}
       </div>
