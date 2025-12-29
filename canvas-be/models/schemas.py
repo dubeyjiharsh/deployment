@@ -51,6 +51,45 @@ class CanvasList(BaseModel):
     updated_at: datetime
     problem_statement: str
 
+class KPIItem(BaseModel):
+    metric: str
+    target: str
+    measurement_frequency: str
+
+class KeyFeatureItem(BaseModel):
+    feature: str
+    description: str
+    priority: str  # Should be one of ["High", "Medium", "Low"]
+
+class RiskItem(BaseModel):
+    risk: str
+    impact: str  # Should be one of ["High", "Medium", "Low"]
+    probability: str  # Should be one of ["High", "Medium", "Low"]
+    mitigation: str
+
+class NonFunctionalRequirementItem(BaseModel):
+    category: str
+    requirement: str
+
+class UseCaseItem(BaseModel):
+    use_case: str
+    actor: str
+    description: str
+
+class CanvasFieldList(BaseModel):
+    Title: str = Field(..., alias="Title")
+    Problem_Statement: str = Field(..., alias="Problem Statement")
+    Objectives: List[str] = Field(..., alias="Objectives")
+    KPIs: List[KPIItem] = Field(..., alias="KPIs")
+    Success_Criteria: List[str] = Field(..., alias="Success Criteria")
+    Key_Features: List[KeyFeatureItem] = Field(..., alias="Key Features")
+    Risks: List[RiskItem] = Field(..., alias="Risks")
+    Assumptions: List[str] = Field(..., alias="Assumptions")
+    Non_Functional_Requirements: List[NonFunctionalRequirementItem] = Field(..., alias="Non Functional Requirements")
+    Use_Cases: List[UseCaseItem] = Field(..., alias="Use Cases")
+    Governance: Optional[Dict[str, Any]] = Field(None, alias="Governance")
+    Relevant_Facts: Optional[Dict[str, Any]] = Field(None, alias="Relevant Facts")  
+
 class CanvasListResponse(BaseModel):
     """Response for listing canvases"""
     canvases: List[CanvasList]

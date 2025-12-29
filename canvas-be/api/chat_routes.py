@@ -1,8 +1,9 @@
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Form, File, UploadFile
+from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Body
 from models.schemas import (
     MessageResponse,
-    ConversationHistoryResponse
+    ConversationHistoryResponse,
+    CanvasFieldList
 )
 from services.assistant_service import AssistantService
 from services.file_service import FileService
@@ -105,6 +106,53 @@ async def send_message(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process message: {str(e)}"
+        
+        )
+
+@router.post("/{canvas_id}/save_canvas")
+async def save_canvas(
+    canvas_id: str,
+    canvas_json: CanvasFieldList = Body(..., description="Updated business model canvas JSON")
+):
+    """
+    Edit the canvas JSON directly
+    
+    Args:
+        canvas_id: The canvas session UUID
+        canvas_json: Updated business model canvas JSON
+    
+    Returns:
+        Success message
+    """
+    try:
+        # Verify canvas exists
+        canvas = postgres_store.get_canvas(canvas_id)
+        if not canvas:
+            raise HTTPException(status_code=404, detail="Canvas session not found")
+
+        # Pydantic validation is already performed by FastAPI via CanvasFieldList
+        # Convert to dict with aliases for DB/storage
+        canvas_dict = canvas_json.dict(by_alias=True, exclude_unset=True)
+
+        # Validate canvas structure (optional, if you want extra validation)
+        is_valid, errors = validate_canvas_structure(canvas_dict)
+        if not is_valid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Canvas validation errors: {errors}"
+            )
+
+        # Save canvas fields to database
+        postgres_store.upsert_canvas_fields(canvas_id, canvas_dict)
+
+        return {"message": "Canvas updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update canvas: {str(e)}"
         )
 
 @router.get("/{canvas_id}/history", response_model=ConversationHistoryResponse)
