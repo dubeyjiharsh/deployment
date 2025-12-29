@@ -1,10 +1,10 @@
 "use client";
-
+ 
 import * as React from "react";
 import { ChevronDown, Loader2, Pencil } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
+ 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,7 @@ import {
   GOVERNANCE_CATEGORY_LABELS,
   SCOPE_CATEGORY_LABELS,
 } from "@/lib/validators/structured-field-schemas";
-
+ 
 function isCanvasField(value: unknown): value is CanvasField<unknown> {
   return (
     !!value &&
@@ -41,13 +41,13 @@ function isCanvasField(value: unknown): value is CanvasField<unknown> {
     "evidence" in value
   );
 }
-
+ 
 function defaultValueForType(valueType?: string): unknown {
   if (valueType === "array") return [];
   if (valueType === "object") return {};
   return "";
 }
-
+ 
 function ensureField(value: unknown, valueType?: string): CanvasField<unknown> {
   if (isCanvasField(value)) return value;
   return {
@@ -56,11 +56,11 @@ function ensureField(value: unknown, valueType?: string): CanvasField<unknown> {
     confidence: 0.5,
   };
 }
-
+ 
 function EvidenceMenu({ evidence }: { evidence: EvidenceItem[] | undefined }): React.ReactElement | null {
   const list = Array.isArray(evidence) ? evidence : [];
   if (list.length === 0) return null;
-
+ 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -88,7 +88,7 @@ function EvidenceMenu({ evidence }: { evidence: EvidenceItem[] | undefined }): R
     </DropdownMenu>
   );
 }
-
+ 
 function containsMarkdown(text: string): boolean {
   const markdownPatterns = [
     /\*\*[^*]+\*\*/, // **bold**
@@ -101,7 +101,7 @@ function containsMarkdown(text: string): boolean {
     /^[-*]\s+\*\* /m, // - ** bold item**
     /^•\s*\*\* /m, // • ** bold item**
   ];
-
+ 
   const structuredPatterns = [
     /\*\*Actor:\*\*/i,
     /\*\*Goal:\*\*/i,
@@ -111,10 +111,10 @@ function containsMarkdown(text: string): boolean {
     /\*\*Pain Points:\*\*/i,
     /\*\*Success Definition:\*\*/i,
   ];
-
+ 
   return markdownPatterns.some((p) => p.test(text)) || structuredPatterns.some((p) => p.test(text));
 }
-
+ 
 function preprocessContent(content: string): string {
   const fieldLabels = [
     "Actor",
@@ -127,21 +127,21 @@ function preprocessContent(content: string): string {
     "Responsibility",
     "Authority",
   ];
-
+ 
   let processed = content;
-
+ 
   // Add line breaks before common labels even if run together
   fieldLabels.forEach((label) => {
     const boldPattern = new RegExp(`([^\\n])\\s*\\*\\*${label}:\\*\\*`, "gi");
     processed = processed.replace(boldPattern, `$1\n\n**${label}:**`);
   });
-
+ 
   // Reduce excess blank lines
   processed = processed.replace(/\n{3,}/g, "\n\n");
-
+ 
   return processed;
 }
-
+ 
 function MarkdownContent({ content }: { content: string }): React.ReactElement {
   const processed = preprocessContent(content);
   return (
@@ -168,12 +168,12 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
     </div>
   );
 }
-
+ 
 function renderValue(value: unknown): React.ReactNode {
   if (value === null || value === undefined || value === "") {
     return <span className="text-muted-foreground">—</span>;
   }
-
+ 
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return <span className="text-muted-foreground">—</span>;
@@ -207,7 +207,7 @@ function renderValue(value: unknown): React.ReactNode {
         </div>
       );
     }
-
+ 
     return (
       <ul className="list-disc pl-5 space-y-1">
         {value.map((v, idx) => (
@@ -218,13 +218,13 @@ function renderValue(value: unknown): React.ReactNode {
       </ul>
     );
   }
-
+ 
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     if (Object.keys(obj).length === 0) {
       return <span className="text-muted-foreground">—</span>;
     }
-
+ 
     // Solution recommendation object: { value, actions? }
     if (typeof obj.value === "string") {
       const actions = Array.isArray(obj.actions) ? obj.actions : [];
@@ -265,7 +265,7 @@ function renderValue(value: unknown): React.ReactNode {
         </div>
       );
     }
-
+ 
     // Non-functional requirements
     if (nfrCategoryKeys.some((k) => k in obj)) {
       return (
@@ -290,7 +290,7 @@ function renderValue(value: unknown): React.ReactNode {
         </div>
       );
     }
-
+ 
     // Scope definition
     if ("inScope" in obj || "outOfScope" in obj) {
       const inScope = Array.isArray(obj.inScope) ? (obj.inScope as unknown[]) : [];
@@ -329,7 +329,7 @@ function renderValue(value: unknown): React.ReactNode {
         </div>
       );
     }
-
+ 
     // Governance
     if ("approvers" in obj || "reviewers" in obj) {
       const approvers = Array.isArray(obj.approvers) ? (obj.approvers as unknown[]) : [];
@@ -337,7 +337,7 @@ function renderValue(value: unknown): React.ReactNode {
       if (approvers.length === 0 && reviewers.length === 0) {
         return <span className="text-muted-foreground">—</span>;
       }
-
+ 
       const renderPeople = (people: unknown[]) => (
         <ul className="space-y-1.5">
           {people.map((p, idx) => {
@@ -357,7 +357,7 @@ function renderValue(value: unknown): React.ReactNode {
           })}
         </ul>
       );
-
+ 
       return (
         <div className="space-y-4">
           {approvers.length > 0 && (
@@ -375,25 +375,25 @@ function renderValue(value: unknown): React.ReactNode {
         </div>
       );
     }
-
+ 
     return (
       <pre className="text-sm bg-muted/40 rounded-md p-3 overflow-auto">
         {JSON.stringify(value, null, 2)}
       </pre>
     );
   }
-
+ 
   if (typeof value === "string" && containsMarkdown(value)) {
     return <MarkdownContent content={value} />;
   }
   return <p className="text-sm leading-relaxed whitespace-pre-wrap">{String(value)}</p>;
 }
-
+ 
 function humanizeKey(key: string): string {
   const withSpaces = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ");
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
-
+ 
 function stringifyInline(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "string") return value;
@@ -405,26 +405,26 @@ function stringifyInline(value: unknown): string {
   }
   return String(value);
 }
-
+ 
 export interface CanvasGridProps {
   canvas: BusinessCanvas;
   onCanvasChange?: (next: BusinessCanvas) => void;
 }
-
+ 
 export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.ReactElement {
   const [activeFieldKey, setActiveFieldKey] = React.useState<string | null>(null);
   const [draftValue, setDraftValue] = React.useState<unknown>(null);
   const [isSaving, setIsSaving] = React.useState(false);
-
+ 
   const allConfigs = React.useMemo(
     () => [...DEFAULT_CANVAS_FIELDS].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     []
   );
-
+ 
   const headerTitle = ensureField((canvas as Record<string, unknown>).title, "string");
   const headerProblem = ensureField((canvas as Record<string, unknown>).problemStatement, "string");
   const headerSolution = ensureField((canvas as Record<string, unknown>).solutionRecommendation, "object");
-
+ 
   const openEdit = (fieldKey: string) => {
     const config = allConfigs.find((f) => f.fieldKey === fieldKey);
     const raw = (canvas as Record<string, unknown>)[fieldKey];
@@ -432,19 +432,19 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     setActiveFieldKey(fieldKey);
     setDraftValue(field.value);
   };
-
+ 
   const closeEdit = () => {
     setActiveFieldKey(null);
     setDraftValue(null);
     setIsSaving(false);
   };
-
+ 
   const saveEdit = async () => {
     if (!activeFieldKey) return;
     const fieldKey = activeFieldKey;
     const config = allConfigs.find((f) => f.fieldKey === fieldKey);
     const currentField = ensureField((canvas as Record<string, unknown>)[fieldKey], config?.valueType);
-
+ 
     setIsSaving(true);
     const updatedField = { ...currentField, value: draftValue } satisfies CanvasField<unknown>;
     const nextCanvas = {
@@ -452,26 +452,26 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
       [fieldKey]: updatedField,
       updatedAt: new Date().toISOString(),
     } as BusinessCanvas;
-
+ 
     onCanvasChange?.(nextCanvas);
     closeEdit();
   };
-
+ 
   const contentConfigs = allConfigs.filter(
     (f) => f.fieldKey !== "title" && f.fieldKey !== "problemStatement" && f.fieldKey !== "solutionRecommendation"
   );
-
+ 
   const handleFileUpload = (files: FileList | null) => {
     if (files) {
       console.log("Uploaded files:", files);
     }
   };
-
+ 
   return (
     <div className="space-y-4">
       {/* Header cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-5">
+      <div className="w-full mb-4">
+        <Card className="p-5 w-full">
           <div className="space-y-3">
             <h1 className="text-2xl font-semibold tracking-tight text-primary">
               {typeof headerTitle.value === "string" && headerTitle.value ? headerTitle.value : "Untitled Canvas"}
@@ -482,27 +482,27 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
             <EvidenceMenu evidence={headerProblem.evidence} />
           </div>
         </Card>
-
-        <Card className="p-5">
+ 
+        {/* <Card className="p-5">
           <div className="space-y-3">
-            <h2 className="text-base font-semibold text-primary">Solution Recommendation</h2>
+            <h2 className="text-base font-semibold text-primary">Problem Statement</h2>
             <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {renderValue(headerSolution.value)}
+              {renderValue(headerProblem.value)}
             </div>
-            <EvidenceMenu evidence={headerSolution.evidence} />
+            <EvidenceMenu evidence={headerProblem.evidence} />
           </div>
-        </Card>
+        </Card> */}
       </div>
-
+ 
       {/* Tabs bar (Canvas and BRD beside each other) */}
       <Tabs defaultValue="canvas" className="w-full">
         <div className="flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="canvas">Canvas</TabsTrigger>
           </TabsList>
-          <div className="text-xs text-muted-foreground">All fields visible (static demo)</div>
+          {/* <div className="text-xs text-muted-foreground">All fields visible (static demo)</div> */}
         </div>
-
+ 
         <TabsContent value="canvas" className="mt-4 space-y-4">
           {/* Field grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
@@ -510,9 +510,9 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
               const raw = (canvas as Record<string, unknown>)[config.fieldKey];
               const field = ensureField(raw, config.valueType);
               const hasEvidence = Array.isArray(field.evidence) && field.evidence.length > 0;
-
+ 
               return (
-                <Card key={config.fieldKey} className="p-4">
+                <Card key={config.fieldKey} className="p-4 h-80 max-h-80 flex flex-col">
                   <div className="flex items-start justify-start gap-3">
                     <div className="min-w-0">
                       <h3 className="font-semibold text-primary truncate">{config.name}</h3>
@@ -528,22 +528,23 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                     </Button>
                   </div>
 
-                  <div className={cn("mt-3", typeof field.value === "object" ? "" : "")}>
-                    {renderValue(field.value)}
-                  </div>
-
-                  {hasEvidence && (
-                    <div className="mt-3">
-                      <EvidenceMenu evidence={field.evidence} />
+                  <ScrollArea className="mt-3 flex-1 w-full">
+                    <div className={cn("", typeof field.value === "object" ? "" : "")}>
+                      {renderValue(field.value)}
                     </div>
-                  )}
+                    {hasEvidence && (
+                      <div className="mt-3">
+                        <EvidenceMenu evidence={field.evidence} />
+                      </div>
+                    )}
+                  </ScrollArea>
                 </Card>
               );
             })}
           </div>
         </TabsContent>
       </Tabs>
-
+ 
       <Dialog open={!!activeFieldKey} onOpenChange={(open) => (!open ? closeEdit() : null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -554,7 +555,7 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                 : ""}
             </DialogTitle>
           </DialogHeader>
-
+ 
           {activeFieldKey ? (
             <StructuredFieldEditor
               fieldKey={activeFieldKey}
@@ -587,3 +588,5 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     </div>
   );
 }
+ 
+ 

@@ -129,30 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="px-2 pt-2 pb-1">
             <div className="bg-gray-300 h-px w-full" />
           </div>
-          {/* Live chat/canvas history */}
-          <SidebarGroupContent className="px-1.5 md:px-0 group-data-[collapsible=icon]:hidden">
-            <div className="flex flex-col gap-2 mt-2">
-              {loading ? (
-                <div className="text-xs text-muted-foreground px-3">Loading...</div>
-              ) : error ? (
-                <div className="text-xs text-red-500 px-3">{error}</div>
-              ) : canvases.length === 0 ? (
-                <div className="text-xs text-muted-foreground px-3">No chats yet.</div>
-              ) : (
-                canvases.map((canvas) => (
-                  <div
-                    key={canvas.canvas_id}
-                    className="block px-3 py-2 rounded bg-blue-100 text-blue-900 hover:bg-blue-200 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/canvas/${canvas.canvas_id}`)}
-                    title={canvas.title + (canvas.problem_statement ? `: ${canvas.problem_statement}` : "")}
-                  >
-                    <div className="font-semibold text-sm truncate" style={{ maxWidth: '180px' }}>{canvas.title || "Untitled Canvas"}</div>
-                    <div className="text-xs text-blue-700 truncate" style={{ maxWidth: '180px' }}>{canvas.problem_statement || "No problem statement."}</div>
-                  </div>
-                ))
-              )}
-            </div>
-          </SidebarGroupContent>
+          {/* Live chat/canvas history removed as requested */}
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>

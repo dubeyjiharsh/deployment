@@ -1,5 +1,5 @@
 export type DisplayStyle = "auto" | "bullets";
-
+ 
 export type DefaultCanvasFieldConfig = {
   id: string;
   name: string;
@@ -18,15 +18,15 @@ export type DefaultCanvasFieldConfig = {
   displayStyle?: DisplayStyle;
   description?: string;
 };
-
+ 
 /**
- * Default canvas field configurations (hardcoded).
- *
- * Removed (per requirements):
- * - `urgency`
- * - `timelines`
- * - `alignmentLongTerm` (strategic alignment)
- */
+* Default canvas field configurations (hardcoded).
+*
+* Removed (per requirements):
+* - `urgency`
+* - `timelines`
+* - `alignmentLongTerm` (strategic alignment)
+*/
 export const DEFAULT_CANVAS_FIELDS: DefaultCanvasFieldConfig[] = [
   // === CORE FIELDS (Always Required) ===
   {
@@ -79,7 +79,7 @@ export const DEFAULT_CANVAS_FIELDS: DefaultCanvasFieldConfig[] = [
     displayStyle: "auto",
     description: "Recommended solution with prioritized actions",
   },
-
+ 
   // === PLANNING FIELDS ===
   {
     id: "objectives",
@@ -163,7 +163,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Measurable success criteria",
   },
-
+ 
   // === TECHNICAL FIELDS ===
   {
     id: "keyFeatures",
@@ -253,7 +253,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "bullets",
     description: "Security and compliance requirements",
   },
-
+ 
   // === FINANCIAL FIELDS ===
   {
     id: "budgetResources",
@@ -291,7 +291,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Return on investment metrics",
   },
-
+ 
   // === RISK & STAKEHOLDERS ===
   {
     id: "risks",
@@ -365,7 +365,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "bullets",
     description: "Project assumptions to validate",
   },
-
+ 
   // === PERSONAS ===
   {
     id: "personas",
@@ -388,7 +388,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "User personas with profile, needs, pain points, and success definitions",
   },
-
+ 
   // === GOVERNANCE ===
   {
     id: "governance",
@@ -411,7 +411,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Project governance with approvers and reviewers",
   },
-
+ 
   // === NON FUNCTIONAL REQUIREMENTS ===
   {
     id: "nonFunctionalRequirements",
@@ -434,7 +434,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Non-functional requirements across performance, usability, reliability, security, and data quality",
   },
-
+ 
   // === USE CASES ===
   {
     id: "useCases",
@@ -457,7 +457,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Use cases with actor, goal, and scenario descriptions",
   },
-
+ 
   // === IN-SCOPE - OUT-OF-SCOPE ===
   {
     id: "scopeDefinition",
@@ -480,20 +480,33 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     displayStyle: "auto",
     description: "Project scope boundaries defining what is included and excluded",
   },
-];
-
+].filter(field => [
+  "title",
+  "problemStatement",
+  "objectives",
+  "kpis",
+  "successCriteria",
+  "keyFeatures",
+  "relevantFacts",
+  "risks",
+  "assumptions",
+  "nonFunctionalRequirements",
+  "useCases",
+  "governance"
+].includes(field.id));
+ 
 export function getCategoryDisplayName(category: string): string {
   const names: Record<string, string> = {
     core: "Core",
     planning: "Planning",
     technical: "Technical",
-    financial: "Financial",
+    financial: "Budget, Resources & ROI",
     risk_stakeholders: "Risk & Stakeholders",
     custom: "Custom",
   };
   return names[category] || category;
 }
-
+ 
 export function getCategoryDescription(category: string): string {
   const descriptions: Record<string, string> = {
     core: "Essential fields that define the canvas",
@@ -505,4 +518,3 @@ export function getCategoryDescription(category: string): string {
   };
   return descriptions[category] || "";
 }
-
