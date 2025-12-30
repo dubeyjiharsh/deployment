@@ -1,16 +1,31 @@
 import * as React from "react";
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { linkTo } from "@/lib/router";
+import { linkTo, navigate } from "@/lib/router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
+import { MoreVertical, Trash2 } from "lucide-react";
 import axios from "axios";
-
-
-
+ 
 export function DashboardPage(): React.ReactElement {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>("newest");
   const [search, setSearch] = useState("");
@@ -18,42 +33,88 @@ export function DashboardPage(): React.ReactElement {
   const [canvases, setCanvases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [canvasToDelete, setCanvasToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+ 
   useEffect(() => {
-    const fetchCanvases = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
-          },
-        });
-        setCanvases(response.data.canvases || []);
-        console.log('Fetched canvases:', response.data.canvases);
-      } catch (err) {
-        setError("Failed to load canvases");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchCanvases();
   }, []);
-
-  // Sort and filter canvases
+ 
+  const fetchCanvases = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+        },
+      });
+      setCanvases(response.data.canvases || []);
+      window.dispatchEvent(new Event("canvasListUpdated"));
+      console.log('Fetched canvases:', response.data.canvases);
+    } catch (err) {
+      setError("Failed to load canvases");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+ 
+  const handleDeleteClick = (canvas: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCanvasToDelete(canvas);
+    setDeleteDialogOpen(true);
+  };
+ 
+  const handleDeleteConfirm = async () => {
+    if (!canvasToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await axios.delete(`http://localhost:8020/api/canvas/${canvasToDelete.canvas_id}`, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+        },
+      });
+      
+      setCanvases(canvases.filter(c => c.canvas_id !== canvasToDelete.canvas_id));
+      window.dispatchEvent(new Event("canvasListUpdated"));
+      
+      setDeleteDialogOpen(false);
+      setCanvasToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete canvas:", err);
+      alert("Failed to delete canvas. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+ 
+  const handleEditCanvas = (canvasId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Set session storage to signal CreateCanvasPage to restore history
+    sessionStorage.setItem("canvasId", canvasId);
+    sessionStorage.setItem("isEditingCanvas", "true");
+    sessionStorage.removeItem("chatState"); // Ensure fresh history fetch
+ 
+    navigate(`/canvas/create`);
+  };
+ 
   const filteredCanvases = useMemo(() => {
     let filtered = canvases.filter((c) => {
       const title = c.title?.value?.toLowerCase?.() || c.title?.toLowerCase?.() || "";
       return title.includes(search.toLowerCase());
     });
     filtered = filtered.sort((a, b) => {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
       return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
     });
     return filtered;
   }, [canvases, search, sortOrder]);
-
+ 
   return (
     <div className="p-6">
       <div className="space-y-4">
@@ -133,26 +194,91 @@ export function DashboardPage(): React.ReactElement {
               <div className="text-center text-muted-foreground py-8">No canvases found.</div>
             )}
             {filteredCanvases.map((canvas) => (
-              <a key={canvas.id} href={linkTo(`/canvas/${canvas.id}`)} className="block">
-                <Card className="border cursor-pointer transition-colors hover:bg-muted/30">
+              <div key={canvas.canvas_id} className="block">
+                <Card className="border cursor-pointer transition-colors hover:bg-muted/30 relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between">
+                  <div className="absolute top-2 right-2 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-black focus:text-black cursor-pointer"
+                          onClick={(e) => handleDeleteClick(canvas, e)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <CardHeader>
-                    <CardTitle className="text-base text-blue-500">{canvas?.title?.value || canvas?.title || "Untitled Canvas"} <span className="text-xs text-gray-400">{canvas.canvas_id}</span></CardTitle>
+                    <CardTitle className="text-base text-blue-500 pr-8">
+                      {canvas.title || "Untitled Canvas"}
+                    </CardTitle>
                     <CardDescription className="line-clamp-2">
-                      {canvas?.problemStatement?.value || canvas?.problemStatement || "Canvas ID: " + canvas.canvas_id}
+                      {canvas.problem_statement || "Canvas ID: " + canvas.canvas_id}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
-                      {canvas.createdAt ? formatDistanceToNow(new Date(canvas.createdAt), { addSuffix: true }) : ""}
+                      {canvas.created_at ? formatDistanceToNow(new Date(canvas.created_at), { addSuffix: true }) : ""}
                     </div>
-                    <div className="text-sm text-primary">Open canvas</div>
+                    <div className="flex gap-4 items-center">
+                      <div
+                        className="text-sm text-primary cursor-pointer underline"
+                        style={{ textDecoration: 'underline' }}
+                        onClick={(e) => handleEditCanvas(canvas.canvas_id, e)}
+                      >
+                        Edit canvas
+                      </div>
+                      <div
+                        className="text-sm text-primary cursor-pointer underline"
+                        onClick={() => {
+                          sessionStorage.setItem("canvasJson", JSON.stringify(canvas));
+                          sessionStorage.setItem("canvasId", canvas.canvas_id);
+                          navigate(`/canvas-preview/${canvas.canvas_id}`);
+                        }}
+                      >
+                        Open canvas
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-              </a>
+              </div>
             ))}
           </div>
         )}
       </div>
+ 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{canvasToDelete?.title || 'this canvas'}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="text-white"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
