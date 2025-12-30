@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from api import canvas_routes, chat_routes
+from api.generate_document_route import router as generate_document_router
 import sys
 
 # Ignore deprecation warnings
@@ -28,6 +29,7 @@ app.add_middleware(
 # Include routers
 app.include_router(canvas_routes.router)
 app.include_router(chat_routes.router)
+app.include_router(generate_document_router)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

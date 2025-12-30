@@ -138,9 +138,10 @@ class PostgresStore:
         try:
             cur.execute(
                 """
-                SELECT canvas_id, name, status, thread_id, created_at, updated_at
-                FROM canvas
-                ORDER BY created_at DESC
+                SELECT c.canvas_id, c.name, c.status, c.thread_id, c.created_at, c.updated_at, cf.problem_statement
+                FROM canvas c
+                JOIN canvas_fields cf ON c.canvas_id = cf.canvas_id               
+                ORDER BY c.created_at DESC
                 """
             )
             

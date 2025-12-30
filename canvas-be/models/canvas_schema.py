@@ -1,11 +1,12 @@
 import json
 
+#LLM response schema for Business Model Canvas
 BMC_SCHEMA = {
     "type": "object",
     "properties": {
         "Title": {
             "type": "string",
-            "description": "A concise, descriptive title for the business model or project"
+            "description": "A concise, descriptive title for the business model or project"  
         },
         "Problem Statement": {
             "type": "string",
