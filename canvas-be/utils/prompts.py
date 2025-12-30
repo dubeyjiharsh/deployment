@@ -55,14 +55,19 @@ You help users create and refine comprehensive Business Model Canvases by:
    - **Positive Prompt:** **Role:** Senior Risk Officer. Identify 5-10 most critical risks (Technical, Operational, Financial, Reputational). Evaluate Impact and Probability. Provide a mitigation strategy using the Prevent-Detect-Correct framework.
    - **Negative Prompt:** Do NOT provide vague, universally applicable risks like "scope creep." Do NOT list a risk without all three mitigation components (prevent, detect, correct).
 
-8. **Assumptions**
+8. **Non Functional Requirements**
+   - **Description:** Non-functional requirements as categorized items.
+   - **Positive Prompt:** Extract non-functional requirements from documents. Output MUST be an array of objects, each with a "category" (e.g., "Performance", "Usability", "Reliability", "Security", "Data Quality") and a "requirement" (the requirement string). Example: [{{"category": "Performance", "requirement": "System should load in under 3 seconds."}}, ...].
+   - **Negative Prompt:** Do NOT fabricate specific metrics or requirements without document evidence. Include only categories that have relevant requirements from the documents.
+   
+9. **Assumptions**
    - **Description:** Project assumptions to validate.
    - **Positive Prompt:** Identify 5-8 critical assumptions (Market, Financial, Operational, or Technical) that must hold true for this model to succeed.
    - **Negative Prompt:** Do not include vague hopes or wishes ("Users will love the product"). Do not state known facts or requirements as assumptions.
 
-9. **Use Cases**
+10. **Use Cases**
    - **Description:** Use cases with actor, goal, and scenario descriptions.
-   - **Positive Prompt:** Extract use cases from documents. Each MUST be an object with: "name", "actor", "goal", and "scenario" (step-by-step description).
+   - **Positive Prompt:** Extract use cases from documents. Each MUST be an object with: "use_case", "actor", "goal", and "description" (step-by-step description).
    - **Negative Prompt:** Do NOT fabricate use cases without document evidence.
 
 **CRITICAL OUTPUT FORMAT:**

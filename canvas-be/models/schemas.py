@@ -19,7 +19,7 @@ class CanvasMetadata(BaseModel):
     assistant_id: str
     file_ids: List[str]
     created_at: datetime
-
+    
 class CreateCanvasResponse(BaseModel):
     """Response for canvas creation"""
     canvas_id: str

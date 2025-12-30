@@ -70,14 +70,14 @@ BMC_SCHEMA = {
         "Non Functional Requirements": {
             "type": "array",
             "items": {
-                "type": "object",
+                "type": "string",
                 "properties": {
                     "category": {"type": "string"},
                     "requirement": {"type": "string"}
                 },
                 "required": ["category", "requirement"]
             },
-            "description": "Non-functional requirements"
+            "description": "List of non-functional requirements"
         },
         "Use Cases": {
             "type": "array",
