@@ -112,40 +112,56 @@ async def get_canvas_fields(canvas_id: str) -> Dict[str, Any]:
             detail=f"Failed to retrieve canvas fields: {str(e)}"
         )
 
-# @router.delete("/{canvas_id}")
-# async def delete_canvas(canvas_id: str):
-#     """
-#     Delete a canvas session and cleanup resources
+@router.post("/{canvas_id}")
+async def delete_canvas(canvas_id: str, action: str = "archive"):
+    """
+    Perform action based on the specified action for a canvas session.
+    Actions possible: Delete, Restore, Archive(default)
     
-#     Args:
-#         canvas_id: The canvas session UUID
+    Args:
+        canvas_id: The canvas session UUID
+        action: The action to perform (3 options)
     
-#     Returns:
-#         Success message
-#     """
-#     try:
-#         # Verify canvas exists
-#         if not postgres_store.canvas_exists(canvas_id):
-#             raise HTTPException(status_code=404, detail="Canvas session not found")
+    Returns:
+        Success message
+    """
+    try:
+        # Verify canvas exists
+        if not postgres_store.canvas_exists(canvas_id):
+            raise HTTPException(status_code=404, detail="Canvas session not found")
         
-#         # Get canvas to cleanup Azure resources
-#         canvas = postgres_store.get_canvas(canvas_id)
+        # Get canvas to cleanup Azure resources
+        canvas = postgres_store.get_canvas(canvas_id)
         
-#         # Optional: Cleanup Azure resources
-#         # assistant_service.delete_assistant(canvas["assistant_id"])
-#         # assistant_service.delete_thread(canvas["thread_id"])
+        if action == "archive":
+            # Update status to 'archived'
+            postgres_store.update_status(canvas_id, action='archived')
+            return {
+                "message": f"Canvas session {canvas_id} archived successfully"
+            }
         
-#         # Delete from database
-#         postgres_store.delete_canvas(canvas_id)
+        elif action == "restore":
+            # Update status to 'drafted'
+            postgres_store.update_status(canvas_id, action='drafted')
+            return {
+                "message": f"Canvas session {canvas_id} restored successfully"
+            }
         
-#         return {
-#             "message": f"Canvas session {canvas_id} deleted successfully"
-#         }
-    
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Failed to delete canvas session: {str(e)}"
-#         )
+        elif action == "delete":
+        
+            # Optional: Cleanup Azure resources
+            assistant_service.delete_assistant(canvas["assistant_id"])
+            assistant_service.delete_thread(canvas["thread_id"])
+            
+            # Delete from database
+            postgres_store.delete_canvas(canvas_id)
+            
+            return {
+                "message": f"Canvas session {canvas_id} deleted successfully"
+            }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete canvas session: {str(e)}"
+        )

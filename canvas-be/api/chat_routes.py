@@ -134,6 +134,11 @@ async def save_canvas(
         # Convert to dict with aliases for DB/storage
         canvas_dict = canvas_json.dict(by_alias=True, exclude_unset=True)
 
+        # Sync the canvas table's name column with the Title
+        title = canvas_dict.get("Title")
+        if title and title != canvas["name"]:
+            postgres_store.update_canvas_name(canvas_id, title)
+
         # Validate canvas structure (optional, if you want extra validation)
         is_valid, errors = validate_canvas_structure(canvas_dict)
         if not is_valid:

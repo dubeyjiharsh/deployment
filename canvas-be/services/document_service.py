@@ -51,6 +51,7 @@ class DocumentService:
         # Title
         doc.add_heading(canvas_data.get("Title", "Business Model Canvas"), 0)
 
+
         for key, value in canvas_data.items():
             if key == "Title" or key in config["exclude"] or not value:
                 continue
@@ -58,39 +59,45 @@ class DocumentService:
             heading = key.replace("_", " ").title()
             doc.add_heading(heading, level=1)
 
-            #TABLE FIELDS 
+            # TABLE FIELDS (force list of dicts)
             if key.lower() in table_keys and isinstance(value, list):
-                value = DocumentService._normalize_table_data(value)
-                if not value:
-                    continue
-
-                columns = list(value[0].keys())
-                table = doc.add_table(rows=1, cols=len(columns))
-                table.style = "Table Grid"
-
-                # Header row
-                for i, col in enumerate(columns):
-                    table.rows[0].cells[i].text = col.replace("_", " ").title()
-
-                # Data rows
-                for entry in value:
-                    row_cells = table.add_row().cells
+                normalized = DocumentService._normalize_table_data(value)
+                # If normalization failed, try to parse each item as JSON
+                if not normalized and all(isinstance(item, str) for item in value):
+                    try:
+                        normalized = [json.loads(item) for item in value]
+                    except Exception:
+                        normalized = []
+                if normalized and isinstance(normalized[0], dict):
+                    columns = list(normalized[0].keys())
+                    table = doc.add_table(rows=1, cols=len(columns))
+                    table.style = "Table Grid"
+                    # Header row
                     for i, col in enumerate(columns):
-                        row_cells[i].text = str(entry.get(col, ""))
+                        table.rows[0].cells[i].text = col.replace("_", " ").title()
+                    # Data rows
+                    for entry in normalized:
+                        row_cells = table.add_row().cells
+                        for i, col in enumerate(columns):
+                            row_cells[i].text = str(entry.get(col, ""))
+                else:
+                    # Fallback: render as bullet list
+                    for item in value:
+                        doc.add_paragraph(str(item), style="List Bullet")
 
-            #LIST FIELDS 
+            # LIST FIELDS (not table)
             elif isinstance(value, list):
                 for item in value:
                     doc.add_paragraph(str(item), style="List Bullet")
 
-            #DICT FIELDS 
+            # DICT FIELDS 
             elif isinstance(value, dict):
                 for k, v in value.items():
                     p = doc.add_paragraph(style="List Bullet")
                     p.add_run(f"{k.replace('_', ' ').title()}: ").bold = True
                     p.add_run(str(v))
 
-            #TEXT 
+            # TEXT 
             else:
                 doc.add_paragraph(str(value))
 
@@ -121,6 +128,7 @@ class DocumentService:
         ))
         elements.append(Spacer(1, 12))
 
+
         for key, value in canvas_data.items():
             if key == "Title" or key in config["exclude"] or not value:
                 continue
@@ -131,47 +139,52 @@ class DocumentService:
             ))
             elements.append(Spacer(1, 6))
 
-            #TABLE FIELDS
+            # TABLE FIELDS (force list of dicts)
             if key.lower() in table_keys and isinstance(value, list):
-                value = DocumentService._normalize_table_data(value)
-                if not value:
-                    continue
+                normalized = DocumentService._normalize_table_data(value)
+                # If normalization failed, try to parse each item as JSON
+                if not normalized and all(isinstance(item, str) for item in value):
+                    try:
+                        normalized = [json.loads(item) for item in value]
+                    except Exception:
+                        normalized = []
+                if normalized and isinstance(normalized[0], dict):
+                    headers = [h.replace("_", " ").title() for h in normalized[0].keys()]
+                    data = [headers]
+                    for entry in normalized:
+                        row = [
+                            Paragraph(str(entry.get(k, "")), styles["BodyText"])
+                            for k in normalized[0].keys()
+                        ]
+                        data.append(row)
+                    table = Table(
+                        data,
+                        colWidths=[doc.width / len(headers)] * len(headers)
+                    )
+                    table.setStyle(TableStyle([
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                    ]))
+                    elements.append(table)
+                    elements.append(Spacer(1, 12))
+                else:
+                    # Fallback: render as bullet list
+                    for item in value:
+                        elements.append(Paragraph(f"• {item}", styles["BodyText"]))
+                    elements.append(Spacer(1, 12))
 
-                headers = [h.replace("_", " ").title() for h in value[0].keys()]
-                data = [headers]
-
-                for entry in value:
-                    row = [
-                        Paragraph(str(entry.get(k, "")), styles["BodyText"])
-                        for k in value[0].keys()
-                    ]
-                    data.append(row)
-
-                table = Table(
-                    data,
-                    colWidths=[doc.width / len(headers)] * len(headers)
-                )
-
-                table.setStyle(TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                ]))
-
-                elements.append(table)
-                elements.append(Spacer(1, 12))
-
-            # LIST FIELDS 
+            # LIST FIELDS (not table)
             elif isinstance(value, list):
                 for item in value:
                     elements.append(Paragraph(f"• {item}", styles["BodyText"]))
                 elements.append(Spacer(1, 12))
 
-            #DICT FIELDS
+            # DICT FIELDS
             elif isinstance(value, dict):
                 for k, v in value.items():
                     elements.append(
@@ -179,7 +192,7 @@ class DocumentService:
                     )
                 elements.append(Spacer(1, 12))
 
-            #TEXT
+            # TEXT
             else:
                 elements.append(Paragraph(str(value), styles["BodyText"]))
                 elements.append(Spacer(1, 12))
