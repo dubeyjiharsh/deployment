@@ -14,10 +14,13 @@ router = APIRouter(prefix="/api/canvas", tags=["Canvas Management"])
 assistant_service = AssistantService()
 assistant_id = assistant_service.create_assistant()
 
-@router.post("/create", response_model=CreateCanvasResponse)
-async def create_canvas():
+@router.post("/create/{user_id}", response_model=CreateCanvasResponse)
+async def create_canvas(user_id: str):
     """
-    Create a new canvas session
+    Create a new canvas for logged in user
+
+    Args: User authentication context
+        user_id: The user identifier    
     
     Returns:
         canvas_id: Unique identifier for the canvas session (UUID)
@@ -28,6 +31,7 @@ async def create_canvas():
         
         # Store in PostgreSQL
         canvas_id = postgres_store.create_canvas(
+            user_id=user_id,
             thread_id=thread_id,
             assistant_id=assistant_id,
             name="Untitled Canvas",
@@ -45,16 +49,19 @@ async def create_canvas():
             detail=f"Failed to create canvas session: {str(e)}"
         )
 
-@router.get("/list", response_model=CanvasListResponse)
-async def list_canvases():
+@router.get("/list/{user_id}", response_model=CanvasListResponse)
+async def list_canvases(user_id: str):
     """
     Get list of all canvas sessions
+
+    Args: Gets all canvases for logged in user
+        user_id: The user identifier
     
     Returns:
         List of canvas sessions with metadata
     """
     try:
-        canvases = postgres_store.get_all_canvases()
+        canvases = postgres_store.get_all_canvases(user_id=user_id)
         canvas_list = [
             CanvasList(
                 canvas_id=canvas["canvas_id"],
@@ -64,7 +71,7 @@ async def list_canvases():
                 updated_at=canvas["updated_at"],
                 problem_statement=canvas["problem_statement"]
             )
-            for canvas in canvases if canvas.get("status") == "drafted"
+            for canvas in canvases # if canvas.get("status") == "drafted"
         ]
         return CanvasListResponse(canvases=canvas_list)
     except Exception as e:
