@@ -185,14 +185,14 @@ class PostgresStore:
         finally:
             cur.close()
             conn.close()
-    
-    def update_status(self, canvas_id: str):
+
+    def update_status(self, canvas_id: str, action: str='drafted') -> None:
         """
         Update the status of a canvas from 'created' to 'drafted' using canvas_id
         Args:
             canvas_id: Canvas UUID
         Returns:
-            True if successful
+            None
         """
         conn = get_db_connection()
         cur = get_db_cursor(conn)
@@ -200,10 +200,10 @@ class PostgresStore:
             cur.execute(
                 """
                 UPDATE canvas
-                SET status = 'drafted'
+                SET status = %s
                 WHERE canvas_id = %s
                 """,
-                (canvas_id,)
+                (action, canvas_id)
             )
             conn.commit()
             # return cur.rowcount > 0
@@ -213,7 +213,7 @@ class PostgresStore:
         finally:
             cur.close()
             conn.close()
-    
+ 
     def delete_canvas(self, canvas_id: str) -> bool:
         """
         Delete canvas and its fields

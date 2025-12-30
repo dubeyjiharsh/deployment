@@ -209,3 +209,10 @@ class AssistantService:
             self.client.beta.assistants.delete(assistant_id)
         except Exception as e:
             print(f"Error deleting assistant {assistant_id}: {e}")
+
+    def delete_thread(self, thread_id: str):
+        """Delete a conversation thread"""
+        try:
+            self.client.beta.threads.delete(thread_id)
+        except Exception as e:
+            print(f"Error deleting thread {thread_id}: {e}")
