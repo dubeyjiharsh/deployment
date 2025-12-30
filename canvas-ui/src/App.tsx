@@ -78,7 +78,7 @@ import { useHashPath } from "@/lib/router";
 import { DashboardPage } from "@/src/pages/DashboardPage";
 import { CreateCanvasPage } from "@/src/pages/CreateCanvasPage";
 import { CanvasPage } from "@/src/pages/CanvasPage";
-import { CanvasResultPage } from "@/src/pages/CanvasResultPage";
+// import { CanvasResultPage } from "@/src/pages/CanvasResultPage";
 import { UserManagementPage } from "@/src/pages/UserManagementPage";
 import { NotFoundPage } from "@/src/pages/NotFoundPage";
 import { CanvasPreviewPage } from "@/src/pages/CanvasPreviewPage";
@@ -91,8 +91,6 @@ export function App(): React.ReactElement {
     content = <DashboardPage />;
   } else if (path === "/canvas/create") {
     content = <CreateCanvasPage />;
-  } else if (path === "/canvas/result") {
-    content = <CanvasResultPage />;
   } else if (path === "/canvas-preview" || path.startsWith("/canvas-preview/")) {
     // Handle both /canvas-preview and /canvas-preview/:id
     content = <CanvasPreviewPage />;
