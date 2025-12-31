@@ -6,6 +6,7 @@ import {
   IconCirclePlusFilled,
   IconUsers,
 } from "@tabler/icons-react"
+import { API_ENDPOINTS } from '@/config/api';
 
 import { NavUser } from "@/components/nav-user"
 import { linkTo, useHashPath, navigate } from "@/lib/router"
@@ -58,7 +59,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
+        const userId = sessionStorage.getItem("userId");
+        if (!userId) {
+          setError("User not logged in");
+          return;
+        }
+
+        const response = await axios.get(API_ENDPOINTS.canvasList(userId), {
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
           },

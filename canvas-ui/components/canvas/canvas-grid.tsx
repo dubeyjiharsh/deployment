@@ -170,8 +170,57 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
 }
  
 function renderValue(value: unknown): React.ReactNode {
+    // Special handling: Render 'Non Functional Requirements' as a bullet list (like Risks)
+    if (Array.isArray(value) && value.length > 0) {
+      // If all are strings
+      if (value.every((nfr) => typeof nfr === 'string')) {
+        return (
+          <ul className="list-disc pl-5 space-y-1">
+            {value.map((nfr: string, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">{nfr}</li>
+            ))}
+          </ul>
+        );
+      }
+      // If all are objects with requirement/category/rationale
+      if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr)) {
+        return (
+          <ul className="list-disc pl-5 space-y-1">
+            {value.map((nfr: any, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">
+                <strong>{nfr.category ? `${nfr.category}: ` : ""}</strong>
+                {nfr.requirement}
+                {nfr.rationale ? <span> <em>({nfr.rationale})</em></span> : null}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+    }
   if (value === null || value === undefined || value === "") {
     return <span className="text-muted-foreground">—</span>;
+  }
+ 
+  // Render 'Relevant Facts' as a bullet list of strings (like Assumptions)
+  // Accept both array and object (legacy) for compatibility
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+    return (
+      <ul className="list-disc pl-5 space-y-1">
+        {value.map((fact, idx) => (
+          <li key={idx} className="text-sm leading-relaxed">{fact}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (typeof value === "object" && value !== null && Object.keys(value).length > 0 && Object.keys(value).every(k => k.startsWith('additionalProp'))) {
+    const facts = Object.values(value).flatMap(v => Array.isArray(v) ? v : [v]).filter(Boolean);
+    return (
+      <ul className="list-disc pl-5 space-y-1">
+        {facts.map((fact, idx) => (
+          <li key={idx} className="text-sm leading-relaxed">{stringifyInline(fact)}</li>
+        ))}
+      </ul>
+    );
   }
  
   if (Array.isArray(value)) {
@@ -248,13 +297,11 @@ function renderValue(value: unknown): React.ReactNode {
                   return (
                     <li key={idx} className="flex items-start gap-2 text-sm leading-relaxed">
                       <span className="text-primary mt-0.5 flex-shrink-0">•</span>
-                      <span className="flex-1">
+                      <span>
                         {actionText}
-                        {priority ? (
-                          <Badge variant="secondary" className="ml-2 capitalize">
-                            {priority}
-                          </Badge>
-                        ) : null}
+                        {priority && (
+                          <span className="ml-2 text-xs text-muted-foreground">({priority})</span>
+                        )}
                       </span>
                     </li>
                   );
@@ -266,120 +313,16 @@ function renderValue(value: unknown): React.ReactNode {
       );
     }
  
-    // Non-functional requirements
-    if (nfrCategoryKeys.some((k) => k in obj)) {
-      return (
-        <div className="space-y-4">
-          {nfrCategoryKeys.map((key) => {
-            const items = Array.isArray(obj[key]) ? (obj[key] as unknown[]) : [];
-            if (items.length === 0) return null;
-            return (
-              <div key={key}>
-                <div className="font-semibold text-sm mb-2">{NFR_CATEGORY_LABELS[key]}</div>
-                <ul className="space-y-1.5">
-                  {items.map((it, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm leading-relaxed">
-                      <span className="text-primary mt-0.5 flex-shrink-0">•</span>
-                      <span className="flex-1">{stringifyInline(it)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
- 
-    // Scope definition
-    if ("inScope" in obj || "outOfScope" in obj) {
-      const inScope = Array.isArray(obj.inScope) ? (obj.inScope as unknown[]) : [];
-      const outOfScope = Array.isArray(obj.outOfScope) ? (obj.outOfScope as unknown[]) : [];
-      if (inScope.length === 0 && outOfScope.length === 0) {
-        return <span className="text-muted-foreground">—</span>;
-      }
-      return (
-        <div className="space-y-4">
-          {inScope.length > 0 && (
-            <div>
-              <div className="font-semibold text-sm mb-2">{SCOPE_CATEGORY_LABELS.inScope}</div>
-              <ul className="space-y-1.5">
-                {inScope.map((it, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm leading-relaxed">
-                    <span className="text-primary mt-0.5 flex-shrink-0">•</span>
-                    <span className="flex-1">{stringifyInline(it)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {outOfScope.length > 0 && (
-            <div>
-              <div className="font-semibold text-sm mb-2">{SCOPE_CATEGORY_LABELS.outOfScope}</div>
-              <ul className="space-y-1.5">
-                {outOfScope.map((it, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm leading-relaxed">
-                    <span className="text-primary mt-0.5 flex-shrink-0">•</span>
-                    <span className="flex-1">{stringifyInline(it)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      );
-    }
- 
-    // Governance
-    if ("approvers" in obj || "reviewers" in obj) {
-      const approvers = Array.isArray(obj.approvers) ? (obj.approvers as unknown[]) : [];
-      const reviewers = Array.isArray(obj.reviewers) ? (obj.reviewers as unknown[]) : [];
-      if (approvers.length === 0 && reviewers.length === 0) {
-        return <span className="text-muted-foreground">—</span>;
-      }
- 
-      const renderPeople = (people: unknown[]) => (
-        <ul className="space-y-1.5">
-          {people.map((p, idx) => {
-            const person = (p && typeof p === "object" ? (p as Record<string, unknown>) : {}) as Record<string, unknown>;
-            const role = typeof person.role === "string" ? person.role : "Role";
-            const responsibility = typeof person.responsibility === "string" ? person.responsibility : "";
-            const authority = typeof person.authority === "string" ? person.authority : "";
-            return (
-              <li key={idx} className="text-sm leading-relaxed">
-                <span className="font-medium">{role}</span>
-                {responsibility ? ` — ${responsibility}` : ""}
-                {authority ? (
-                  <span className="text-muted-foreground">{` (Authority: ${authority})`}</span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      );
- 
-      return (
-        <div className="space-y-4">
-          {approvers.length > 0 && (
-            <div>
-              <div className="font-semibold text-sm mb-2">{GOVERNANCE_CATEGORY_LABELS.approvers}</div>
-              {renderPeople(approvers)}
-            </div>
-          )}
-          {reviewers.length > 0 && (
-            <div>
-              <div className="font-semibold text-sm mb-2">{GOVERNANCE_CATEGORY_LABELS.reviewers}</div>
-              {renderPeople(reviewers)}
-            </div>
-          )}
-        </div>
-      );
-    }
- 
+    // Fallback: Render object as key-value pairs
     return (
-      <pre className="text-sm bg-muted/40 rounded-md p-3 overflow-auto">
-        {JSON.stringify(value, null, 2)}
-      </pre>
+      <ul className="list-disc pl-5 space-y-1">
+        {Object.entries(obj).map(([k, v]) => (
+          <li key={k} className="text-sm leading-relaxed">
+            <span className="font-medium">{humanizeKey(k)}: </span>
+            <span className="whitespace-pre-wrap">{stringifyInline(v)}</span>
+          </li>
+        ))}
+      </ul>
     );
   }
  
@@ -457,9 +400,26 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     closeEdit();
   };
  
-  const contentConfigs = allConfigs.filter(
+  // Add Relevant Facts to the card configs if not present
+  let contentConfigs = allConfigs.filter(
     (f) => f.fieldKey !== "title" && f.fieldKey !== "problemStatement" && f.fieldKey !== "solutionRecommendation"
   );
+  // Ensure Relevant Facts is included
+  if (!contentConfigs.some(f => f.fieldKey === "relevantFacts")) {
+    contentConfigs.push({
+      id: "relevantFacts",
+      name: "Relevant Facts",
+      fieldKey: "relevantFacts",
+      type: "default",
+      category: "core",
+      enabled: true,
+      includeInGeneration: true,
+      order: 99,
+      valueType: "object",
+      instructions: "Add any facts relevant to the canvas.",
+      description: "Relevant facts for this canvas."
+    });
+  }
  
   const handleFileUpload = (files: FileList | null) => {
     if (files) {
@@ -527,7 +487,7 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                       Edit
                     </Button>
                   </div>
-
+ 
                   <ScrollArea className="mt-3 flex-1 w-full">
                     <div className={cn("", typeof field.value === "object" ? "" : "")}>
                       {renderValue(field.value)}
@@ -559,8 +519,28 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
           {activeFieldKey ? (
             <StructuredFieldEditor
               fieldKey={activeFieldKey}
-              value={draftValue}
-              onChange={setDraftValue}
+              value={(() => {
+                // For 'Relevant Facts', treat as array for editing
+                if (activeFieldKey === 'relevantFacts') {
+                  if (Array.isArray(draftValue)) return draftValue;
+                  if (typeof draftValue === 'object' && draftValue !== null) {
+                    // Convert object to array of values
+                    return Object.values(draftValue).flatMap(v => Array.isArray(v) ? v : [v]).filter(Boolean);
+                  }
+                  return [];
+                }
+                return draftValue;
+              })()}
+              onChange={(val) => {
+                // For 'Relevant Facts', store as array of strings
+                if (activeFieldKey === 'relevantFacts') {
+                  if (Array.isArray(val)) {
+                    setDraftValue(val);
+                    return;
+                  }
+                }
+                setDraftValue(val);
+              }}
               onSave={saveEdit}
               onCancel={closeEdit}
               isSaving={isSaving}
@@ -571,22 +551,12 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
               Loading...
             </div>
           )}
-          <div className="mt-4">
-            <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700">
-              Upload File
-            </label>
-            <input
-              id="file-upload"
-              type="file"
-              accept=".pdf,.docx,.ppt"
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              onChange={(e) => handleFileUpload(e.target.files)}
-            />
-          </div>
+          {/* File upload removed as per user request */}
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+ 
  
  

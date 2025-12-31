@@ -25,6 +25,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { MoreVertical, Trash2 } from "lucide-react";
 import axios from "axios";
+import { API_ENDPOINTS } from '@/config/api';
  
 export function DashboardPage(): React.ReactElement {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>("newest");
@@ -38,27 +39,33 @@ export function DashboardPage(): React.ReactElement {
   const [isDeleting, setIsDeleting] = useState(false);
  
   useEffect(() => {
+    const fetchCanvases = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const userId = sessionStorage.getItem("userId");
+        if (!userId) {
+          setError("User not logged in");
+          return;
+        }
+
+        const response = await axios.get(API_ENDPOINTS.canvasList(userId), {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          },
+        });
+        setCanvases(response.data.canvases || []);
+        window.dispatchEvent(new Event("canvasListUpdated"));
+        console.log('Fetched canvases:', response.data.canvases);
+      } catch (err) {
+        setError("Failed to load canvases");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchCanvases();
   }, []);
- 
-  const fetchCanvases = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get("http://0.0.0.0:8020/api/canvas/list", {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
-        },
-      });
-      setCanvases(response.data.canvases || []);
-      window.dispatchEvent(new Event("canvasListUpdated"));
-      console.log('Fetched canvases:', response.data.canvases);
-    } catch (err) {
-      setError("Failed to load canvases");
-    } finally {
-      setIsLoading(false);
-    }
-  };
  
   const handleDeleteClick = (canvas: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -68,18 +75,18 @@ export function DashboardPage(): React.ReactElement {
  
   const handleDeleteConfirm = async () => {
     if (!canvasToDelete) return;
-    
+
     setIsDeleting(true);
     try {
-      await axios.delete(`http://localhost:8020/api/canvas/${canvasToDelete.canvas_id}`, {
+      await axios.post(API_ENDPOINTS.canvasDelete(canvasToDelete.canvas_id), {
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
         },
       });
-      
+
       setCanvases(canvases.filter(c => c.canvas_id !== canvasToDelete.canvas_id));
       window.dispatchEvent(new Event("canvasListUpdated"));
-      
+
       setDeleteDialogOpen(false);
       setCanvasToDelete(null);
     } catch (err) {
@@ -101,7 +108,7 @@ export function DashboardPage(): React.ReactElement {
  
     navigate(`/canvas/create`);
   };
- 
+
   const filteredCanvases = useMemo(() => {
     let filtered = canvases.filter((c) => {
       const title = c.title?.value?.toLowerCase?.() || c.title?.toLowerCase?.() || "";
