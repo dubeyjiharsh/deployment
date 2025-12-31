@@ -1,6 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { Download, Save, Edit3 } from "lucide-react"; // Added Edit3 icon
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { CanvasGrid } from "@/components/canvas/canvas-grid";
 import { navigate } from "@/lib/router";
@@ -110,18 +116,36 @@ export function CanvasPreviewPage(): React.ReactElement {
     fetchCanvasFields();
   }, [canvasId]);
  
-  const handleExportJson = (): void => {
-    if (!canvas) return;
-    const blob = new Blob([JSON.stringify(jsonData || canvas, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+  const handleExportWord = async (): Promise<void> => {
+    if (!canvasId) return;
+    const url = API_ENDPOINTS.canvasDownload(canvasId, "docx");
+    const response = await fetch(url, { method: "GET" });
+    if (!response.ok) return;
+    const blob = await response.blob();
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `${(canvas.title?.value || "canvas").toString().slice(0, 80)}.json`;
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(canvas?.title?.value || "canvas").toString().slice(0, 80)}.docx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
+ 
+  const handleExportPdf = async (): Promise<void> => {
+    if (!canvasId) return;
+    const url = API_ENDPOINTS.canvasDownload(canvasId, "pdf");
+    const response = await fetch(url, { method: "GET" });
+    if (!response.ok) return;
+    const blob = await response.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(canvas?.title?.value || "canvas").toString().slice(0, 80)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+ 
  
   const handleSave = (): void => {
     try {
@@ -163,7 +187,6 @@ export function CanvasPreviewPage(): React.ReactElement {
  
       {ReactDOM.createPortal(
         <div className="flex items-center gap-3">
-          
           {/* New Edit Canvas Button Added Below */}
           <Button variant="outline" size="sm" onClick={handleEditCanvas}>
             <Edit3 className="mr-2 h-4 w-4" />
@@ -173,10 +196,18 @@ export function CanvasPreviewPage(): React.ReactElement {
             <Save className="mr-2 h-4 w-4" />
             Save
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportJson}>
-            <Download className="mr-2 h-4 w-4" />
-            Export JSON
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportWord}>Download as Word</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPdf}>Download as PDF</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>,
         document.getElementById("page-actions")!
       )}
@@ -187,3 +218,4 @@ export function CanvasPreviewPage(): React.ReactElement {
     </>
   );
 }
+

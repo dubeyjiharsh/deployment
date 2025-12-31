@@ -7,5 +7,5 @@ export const API_ENDPOINTS = {
   canvasMessage: (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}/message`,
   canvasDelete: (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}`,
   canvasFields: (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}/fields`,
-  // Add more endpoints as needed
+  canvasDownload: (canvasId: string, format: string) => `${API_BASE_URL}/api/canvas/${canvasId}/generate-document?format=${format}`,
 };
