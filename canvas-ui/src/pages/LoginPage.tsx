@@ -33,7 +33,7 @@ const LoginPage = () => {
         sessionStorage.setItem('userId', userId);
         
         // Navigate to dashboard
-        navigate('/dashboard');
+        navigate('/DashboardPage');
       } else {
         setError('Login failed. Please check your user ID.');
         console.error('Login failed');

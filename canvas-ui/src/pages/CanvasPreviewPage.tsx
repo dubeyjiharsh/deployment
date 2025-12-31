@@ -11,6 +11,43 @@ import { Button } from "@/components/ui/button";
 import { CanvasGrid } from "@/components/canvas/canvas-grid";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
+import { toast } from "sonner";
+
+
+// Converts the frontend canvas object to the backend payload format (handles NFR and Governance/Relevant Facts)
+function mapCanvasToBackendPayload(canvas: any) {
+  // Convert the categorized NFR object back into the flat array the backend expects
+  const nfrRaw = canvas.nonFunctionalRequirements?.value || {};
+  const formattedNFRs = Object.entries(nfrRaw).flatMap(([category, requirements]) => {
+    if (Array.isArray(requirements)) {
+      return requirements.map(req => ({
+        category: category,
+        requirement: typeof req === 'string' ? req : JSON.stringify(req)
+      }));
+    }
+    return [];
+  });
+ 
+  return {
+    "Title": canvas.title?.value || "",
+    "Problem Statement": canvas.problemStatement?.value || "",
+    "Objectives": Array.isArray(canvas.objectives?.value) ? canvas.objectives.value : [],
+    "KPIs": Array.isArray(canvas.kpis?.value) ? canvas.kpis.value : [],
+    "Success Criteria": Array.isArray(canvas.successCriteria?.value) ? canvas.successCriteria.value : [],
+    "Key Features": Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [],
+    "Risks": Array.isArray(canvas.risks?.value) ? canvas.risks.value : [],
+    "Assumptions": Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [],
+    // FIX: Send as Array of Objects
+    "Non Functional Requirements": Array.isArray(canvas.nonFunctionalRequirements?.value) ? canvas.nonFunctionalRequirements.value : [],
+    // Governance: send as dictionary (object) with string keys and any values
+    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null
+      ? canvas.governance.value
+      : {},
+    "Relevant Facts": Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [],
+    "Use Cases": Array.isArray(canvas.useCases?.value) ? canvas.useCases.value : [],
+  };
+}
+
  
 function parseJsonIfString(v: unknown) {
   if (typeof v === "string") {
@@ -31,43 +68,39 @@ function transformFieldsToCanvas(fields: any) {
     return arr.map((it) => parseJsonIfString(it));
   };
  
-  const nfrRaw = fields.non_functional_requirements;
-  const nonFunctionalRequirements: any = {};
-  if (typeof nfrRaw === "string") {
-    nfrRaw.split(/\r?\n/).forEach((line: string) => {
-      if (!line.trim()) return;
-      try {
-        const obj = JSON.parse(line);
-        const key = (obj.category || "other").toString();
-        nonFunctionalRequirements[key] = nonFunctionalRequirements[key] || [];
-        nonFunctionalRequirements[key].push(obj.requirement || obj);
-      } catch (e) {
-        nonFunctionalRequirements.other = nonFunctionalRequirements.other || [];
-        nonFunctionalRequirements.other.push(line);
-      }
+  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
+  const organizedNFRs: any = {};
+  if (Array.isArray(nfrRaw)) {
+    nfrRaw.forEach((item: any) => {
+      const cat = item.category || "General";
+      const req = item.requirement || "";
+      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
+      organizedNFRs[cat].push(req);
     });
-  } else if (typeof nfrRaw === "object" && nfrRaw !== null) {
-    Object.assign(nonFunctionalRequirements, nfrRaw);
   }
  
-  const canvas: any = {
+  // Always parse 'Relevant Facts' as an array of strings (like Assumptions)
+  let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
+  let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
+    ? relevantFactsRaw.filter((v) => typeof v === 'string')
+    : [];
+  return {
     id: fields.canvas_id || fields.canvasId || "",
-    title: makeField(fields.title || fields.Title || "Untitled Canvas"),
-    problemStatement: makeField(fields.problem_statement || fields.problemStatement || null),
-    objectives: makeField(parseArray(fields.objectives || fields.objectives)),
-    kpis: makeField(parseArray(fields.kpis || fields.kpis)),
-    successCriteria: makeField(parseArray(fields.success_criteria || fields.success_criteria)),
-    keyFeatures: makeField(parseArray(fields.key_features || fields.key_features)),
-    risks: makeField(parseArray(fields.risks || fields.risks)),
-    assumptions: makeField(parseArray(fields.assumptions || fields.assumptions)),
-    nonFunctionalRequirements: makeField(nonFunctionalRequirements),
-    useCases: makeField(parseArray(fields.use_cases || fields.use_cases)),
-    governance: makeField(fields.governance || {}),
+    title: makeField(fields.Title || fields.title || "Untitled Canvas"),
+    problemStatement: makeField(fields.problem_statement || fields.problemStatement || fields["Problem Statement"]),
+    objectives: makeField(parseArray(fields.Objectives || fields.objectives)),
+    kpis: makeField(parseArray(fields.KPIs || fields.kpis)),
+    successCriteria: makeField(parseArray(fields["Success Criteria"] || fields.success_criteria)),
+    keyFeatures: makeField(parseArray(fields["Key Features"] || fields.key_features)),
+    risks: makeField(parseArray(fields.Risks || fields.risks)),
+    assumptions: makeField(parseArray(fields.Assumptions || fields.assumptions)),
+    nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
+    useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
+    governance: makeField(fields.Governance || fields.governance || {}),
+    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevantFacts)),
     createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
     updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
   };
- 
-  return canvas;
 }
  
 export function CanvasPreviewPage(): React.ReactElement {
@@ -115,6 +148,32 @@ export function CanvasPreviewPage(): React.ReactElement {
 
     fetchCanvasFields();
   }, [canvasId]);
+
+  const handleSave = async (): Promise<void> => {
+    if (!canvas) return;
+    const id = canvas.id || sessionStorage.getItem("canvasId");
+    if (!id) return;
+    const url = API_ENDPOINTS.canvasSave(id);
+    const payload = mapCanvasToBackendPayload(canvas);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setJsonData(data.fields || data);
+      setCanvas(transformFieldsToCanvas(data.fields || data));
+      toast.success("Canvas saved successfully!");
+    } catch (error) {
+      toast.error("Failed to save canvas");
+      console.error("Failed to save canvas:", error);
+    }
+  };
+
+
+  
  
   const handleExportWord = async (): Promise<void> => {
     if (!canvasId) return;
@@ -146,16 +205,7 @@ export function CanvasPreviewPage(): React.ReactElement {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
  
- 
-  const handleSave = (): void => {
-    try {
-      localStorage.setItem("savedCanvas", JSON.stringify(canvas));
-      console.log("Canvas saved successfully!");
-    } catch (error) {
-      console.error("Failed to save canvas:", error);
-    }
-  };
- 
+
   // Logic to handle navigation back to the Create page with history restoration
   const handleEditCanvas = (e: React.MouseEvent): void => {
     e.preventDefault();

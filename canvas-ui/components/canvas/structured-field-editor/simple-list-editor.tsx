@@ -288,7 +288,8 @@ function ListItem({
         variant="ghost"
         size="icon"
         onClick={onDelete}
-        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+        className="h-8 w-8 opacity-60 group-hover:opacity-100 text-black hover:text-black"
+        //className="h-8 w-8 opacity-60 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
         aria-label="Delete item"
       >
         <Trash2 className="h-4 w-4" />
