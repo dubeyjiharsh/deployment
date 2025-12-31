@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/canvas", tags=[" Interface"])
 
 doc_service = DocumentService()
 
-@router.get("/api/canvas/{canvas_id}/generate-document")
+@router.get("/{canvas_id}/generate-document")
 async def generate_document(canvas_id: str, format: str = "docx"):
     """
     Generate a DOCX or PDF document for the given canvas_id.

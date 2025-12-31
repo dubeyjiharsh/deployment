@@ -41,6 +41,7 @@ class PostgresStore:
     
     def create_canvas(
         self,
+        user_id: str,
         thread_id: str,
         assistant_id: str,
         name: str = "Untitled Canvas",
@@ -50,6 +51,7 @@ class PostgresStore:
         Create a new canvas record
         
         Args:
+            user_id: The user identifier
             thread_id: Azure OpenAI thread ID
             assistant_id: Azure OpenAI assistant ID
             name: Canvas name
@@ -63,6 +65,7 @@ class PostgresStore:
         
         try:
             canvas_id = str(uuid.uuid4())
+            conversation_metadata = {"user_id": user_id}
             
             cur.execute(
                 """
@@ -80,7 +83,7 @@ class PostgresStore:
                     assistant_id,
                     thread_id,
                     [],  # empty file_ids array
-                    json.dumps({})  # empty conversation_metadata
+                    json.dumps(conversation_metadata)  # empty conversation_metadata
                 )
             )
             
@@ -125,9 +128,12 @@ class PostgresStore:
             cur.close()
             conn.close()
     
-    def get_all_canvases(self) -> List[Dict[str, Any]]:
+    def get_all_canvases(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Get all canvas records
+
+        Args: 
+            user_id: The user identifier
         
         Returns:
             List of canvas records
@@ -140,9 +146,11 @@ class PostgresStore:
                 """
                 SELECT c.canvas_id, c.name, c.status, c.thread_id, c.created_at, c.updated_at, cf.problem_statement
                 FROM canvas c
-                JOIN canvas_fields cf ON c.canvas_id = cf.canvas_id               
+                INNER JOIN canvas_fields cf ON c.canvas_id = cf.canvas_id 
+                WHERE c.conversation_metadata->>'user_id' = %s AND c.status IN %s   
                 ORDER BY c.created_at DESC
-                """
+                """,
+                (user_id, ('drafted',))
             )
             
             results = cur.fetchall()
@@ -299,7 +307,7 @@ class PostgresStore:
                 "relevant_facts": canvas_data.get("Relevant Facts"),
                 "risks": to_array(canvas_data.get("Risks")),
                 "assumptions": to_array(canvas_data.get("Assumptions")),
-                "non_functional_requirements": to_text(canvas_data.get("Non Functional Requirements")),
+                "non_functional_requirements": to_array(canvas_data.get("Non Functional Requirements") if canvas_data.get("Non Functional Requirements") else []),
                 "use_cases": to_array(canvas_data.get("Use Cases")),
                 "governance": to_jsonb(canvas_data.get("Governance")),
                 "tags": to_array(canvas_data.get("Tags", []))
