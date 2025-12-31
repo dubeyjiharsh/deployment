@@ -4,6 +4,7 @@ import { Download, Save, Edit3 } from "lucide-react"; // Added Edit3 icon
 import { Button } from "@/components/ui/button";
 import { CanvasGrid } from "@/components/canvas/canvas-grid";
 import { navigate } from "@/lib/router";
+import { API_ENDPOINTS } from '@/config/api';
  
 function parseJsonIfString(v: unknown) {
   if (typeof v === "string") {
@@ -83,14 +84,14 @@ export function CanvasPreviewPage(): React.ReactElement {
       return;
     }
  
-    const url = `http://0.0.0.0:8020/api/canvas/${id}/fields`;
-    setLoading(true);
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
+    const fetchCanvasFields = async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.canvasFields(id), {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          },
+        });
+        const data = await response.json();
         const fields = data?.fields || data;
         setJsonData(fields);
         const transformed = transformFieldsToCanvas(fields);
@@ -98,12 +99,15 @@ export function CanvasPreviewPage(): React.ReactElement {
         sessionStorage.setItem("canvasJson", JSON.stringify(fields));
         sessionStorage.setItem("canvasId", id);
         if (fields.title) sessionStorage.setItem("canvasTitle", fields.title);
-      })
-      .catch((e) => {
-        console.error("Failed to load canvas fields", e);
-        setError(String(e));
-      })
-      .finally(() => setLoading(false));
+      } catch (error) {
+        console.error("Failed to fetch canvas fields:", error);
+        setError(String(error));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCanvasFields();
   }, [canvasId]);
  
   const handleExportJson = (): void => {
@@ -183,4 +187,3 @@ export function CanvasPreviewPage(): React.ReactElement {
     </>
   );
 }
- 

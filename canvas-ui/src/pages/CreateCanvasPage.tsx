@@ -4,6 +4,7 @@ import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
 import { navigate } from "@/lib/router";
+import { API_ENDPOINTS } from '@/config/api';
  
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
@@ -17,20 +18,20 @@ export function CreateCanvasPage(): React.ReactElement {
   React.useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
- 
+
     const initPage = async () => {
       const isReturning = sessionStorage.getItem("isReturningFromPreview") === "true";
       const isEditing = sessionStorage.getItem("isEditingCanvas") === "true";
       const savedCanvasId = sessionStorage.getItem("canvasId");
       const savedChat = sessionStorage.getItem("chatState");
- 
+
       if (isEditing && savedCanvasId) {
         // --- EDIT MODE: Fetch history from backend ---
         console.log("Editing canvas, fetching history:", savedCanvasId);
         setCanvasId(savedCanvasId);
         setIsLoading(true);
         try {
-          const response = await axios.get(`http://0.0.0.0:8020/api/canvas/${savedCanvasId}/history`, {
+          const response = await axios.get(API_ENDPOINTS.canvasHistory(savedCanvasId), {
             headers: {
               Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
             },
@@ -68,7 +69,13 @@ export function CreateCanvasPage(): React.ReactElement {
         // --- CREATE NEW MODE ---
         console.log("Requesting fresh canvas from backend...");
         try {
-          const response = await axios.post("http://0.0.0.0:8020/api/canvas/create");
+          const userId = sessionStorage.getItem("userId");
+          if (!userId) {
+            console.error("User ID not found in session storage.");
+            return;
+          }
+
+          const response = await axios.post(API_ENDPOINTS.canvasCreate(userId));
           const newId = response.data.canvas_id;
           console.log("New backend ID received:", newId);
           
@@ -83,7 +90,7 @@ export function CreateCanvasPage(): React.ReactElement {
         }
       }
     };
- 
+
     initPage();
   }, []);
  
@@ -103,7 +110,7 @@ export function CreateCanvasPage(): React.ReactElement {
       if (file) formData.append("files", file);
  
       const response = await axios.post(
-        `http://0.0.0.0:8020/api/canvas/${canvasId}/message`,
+        API_ENDPOINTS.canvasMessage(canvasId),
         formData,
         {
           headers: {
