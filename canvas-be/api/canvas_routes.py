@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+import os
 from models.schemas import (
     CreateCanvasResponse,
     CanvasListResponse,
     CanvasList
 )
 from services.assistant_service import AssistantService
+from services.export_service import ExportService
 from db.postgres_store import postgres_store
 from typing import Dict, Any
 
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/api/canvas", tags=["Canvas Management"])
 # Initialize services
 assistant_service = AssistantService()
 assistant_id = assistant_service.create_assistant()
+exp_service = ExportService()
 
 @router.post("/create/{user_id}", response_model=CreateCanvasResponse)
 async def create_canvas(user_id: str):
@@ -118,6 +121,43 @@ async def get_canvas_fields(canvas_id: str) -> Dict[str, Any]:
             status_code=500,
             detail=f"Failed to retrieve canvas fields: {str(e)}"
         )
+
+@router.get("/{canvas_id}/export-canvas")
+async def export_canvas(canvas_id: str, format: str = "docx"):
+    """
+    Generate a DOCX or PDF document for the given canvas_id.
+    Args:
+        canvas_id: The canvas session UUID
+        format: 'docx' or 'pdf'
+    Returns:
+        The generated file as a download response
+    """
+    # Check canvas exists and has fields
+    if not postgres_store.canvas_exists(canvas_id):
+        raise HTTPException(status_code=404, detail="Canvas session not found")
+    fields = postgres_store.get_canvas_fields(canvas_id)
+    if not fields:
+        raise HTTPException(status_code=404, detail="Canvas fields not yet generated")
+
+    # Generate file
+    if format == "pdf":
+        file_path = exp_service.generate_pdf(fields)
+        media_type = "application/pdf"
+        filename = f"canvas_{canvas_id}.pdf"
+    else:
+        file_path = exp_service.generate_docx(fields)
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        filename = f"canvas_{canvas_id}.docx"
+
+    # Read file and return as response
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read()
+        headers = {"Content-Disposition": f"attachment; filename={filename}"}
+        return Response(content=data, media_type=media_type, headers=headers)
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 @router.post("/{canvas_id}")
 async def delete_canvas(canvas_id: str, action: str = "archive"):

@@ -8,7 +8,7 @@ import os
 import json
 import logging
 
-class DocumentService:
+class ExportService:
     """Service for generating DOCX and PDF documents from canvas data"""
 
     @staticmethod
@@ -66,9 +66,8 @@ class DocumentService:
         Returns:
             str: Path to the generated DOCX file.
         """
-        logger = logging.getLogger("DocumentService")
         doc = Document()
-        config = DocumentService._get_clean_data()
+        config = ExportService._get_clean_data()
         table_keys = config["tables"]
 
         # Title
@@ -84,7 +83,7 @@ class DocumentService:
 
             # TABLE LOGIC (KPIs, Key Features, Risks, NFRs, Use Cases)
             if key_clean in table_keys and isinstance(value, list):
-                normalized = DocumentService._normalize_table_data(value)
+                normalized = ExportService._normalize_table_data(value)
                 
                 if normalized and isinstance(normalized[0], dict):
                     columns = list(normalized[0].keys())
@@ -134,8 +133,7 @@ class DocumentService:
         Returns:
             str: Path to the generated PDF file.
         """
-        logger = logging.getLogger("DocumentService")
-        config = DocumentService._get_clean_data()
+        config = ExportService._get_clean_data()
         table_keys = config["tables"]
 
         temp_file = os.path.join(tempfile.gettempdir(), f"canvas_{os.urandom(4).hex()}.pdf")
@@ -158,7 +156,7 @@ class DocumentService:
 
             # TABLE LOGIC
             if key_clean in table_keys and isinstance(value, list):
-                normalized = DocumentService._normalize_table_data(value)
+                normalized = ExportService._normalize_table_data(value)
                 
                 if normalized and isinstance(normalized[0], dict):
                     headers = [h.replace("_", " ").title() for h in normalized[0].keys()]

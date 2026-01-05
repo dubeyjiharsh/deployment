@@ -1,7 +1,7 @@
 # Document rendering schema for canvas fields
 # Maps each field to a rendering type: 'table', 'bullets', or 'paragraph'
 
-document_schema = {
+get_export_schema = {
     "Title": "heading",
     "Problem Statement": "paragraph",
     "Objectives": "bullets",
@@ -11,8 +11,8 @@ document_schema = {
     "Risks": "table",
     "Assumptions": "bullets",
     "Non Functional Requirements": "table",
-    "Use Cases": "table"
+    "Use Cases": "table",
 }
 
-def get_document_schema():
-    return document_schema
+def get_export_schema():
+    return get_export_schema
