@@ -21,12 +21,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 ARG PIP_VERSION=25.3
  
 # Install deps separately for caching
-COPY requirements.txt .
+COPY requirements.lock .
 RUN python -m pip install --no-cache-dir --upgrade "pip==${PIP_VERSION}" \
- && pip wheel --no-cache-dir --wheel-dir /wheels --only-binary :all: -r requirements.txt
+ && pip wheel --no-cache-dir --wheel-dir /wheels --only-binary :all: -r requirements.lock
 
 # Install dependencies into venv from wheelhouse only (reduces dependency confusion risk)
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
+RUN pip install --no-cache-dir --no-index --find-links=/wheels --require-hashes -r requirements.lock
 
 # ---------- Runtime ----------
 FROM python:3.11.14-slim-bookworm AS runtime
@@ -66,7 +66,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Optional: document port (K8s doesn't require EXPOSE)
-EXPOSE 8010 
+EXPOSE 8010
 
 # For FastAPI (main.py with app=FastAPI()):
 CMD ["python", "main.py", "8010"]
