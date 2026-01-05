@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -36,16 +37,17 @@ jobs:
       - name: Detect changes
         id: diff
         run: |
-          if git diff --quiet -- canvas-be/requirements.lock; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+          if [[ -n "$(git status --porcelain -- canvas-be/requirements.lock)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create PR to backend
+      - name: Create PR to backend (using PAT)
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.PR_CREATOR_TOKEN }}
           branch: "automation/backend-update-requirements-lock"
           base: "backend"
           commit-message: "chore(canvas-be): update requirements.lock"
