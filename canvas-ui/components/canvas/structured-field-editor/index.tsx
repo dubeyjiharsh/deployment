@@ -26,7 +26,7 @@ import { CategoryListEditor } from "./category-list-editor";
 import { TimelineEditor } from "./timeline-editor";
 import { CardArrayEditor } from "./card-array-editor";
 import { GovernanceEditor } from "./governance-editor";
-import { BudgetEditor } from "./budget-editor";
+// import { BudgetEditor } from "./budget-editor";
 import { SimpleListEditor } from "./simple-list-editor";
 import { TextEditor } from "./text-editor";
 
@@ -157,8 +157,8 @@ function renderEditor(
     case "governance":
       return <GovernanceEditor {...props} />;
 
-    case "budget":
-      return <BudgetEditor {...props} />;
+    // case "budget":
+    //   return <BudgetEditor {...props} />;
 
     case "simple-list":
       return <SimpleListEditor {...props} />;
@@ -218,6 +218,6 @@ export { CategoryListEditor } from "./category-list-editor";
 export { TimelineEditor } from "./timeline-editor";
 export { CardArrayEditor } from "./card-array-editor";
 export { GovernanceEditor } from "./governance-editor";
-export { BudgetEditor } from "./budget-editor";
+// export { BudgetEditor } from "./budget-editor";
 export { SimpleListEditor } from "./simple-list-editor";
 export { TextEditor } from "./text-editor";

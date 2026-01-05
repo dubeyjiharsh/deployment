@@ -4,7 +4,7 @@
  * CategoryListEditor
  *
  * Editor for fields that are objects with category keys, each containing string arrays.
- * Used for: Non-Functional Requirements, Scope Definition
+ * Used for: Non-Functional Requirements
  *
  * UI: Collapsible sections with headers, each containing a list of editable items
  */

@@ -4,7 +4,7 @@
  * SimpleListEditor
  *
  * Editor for simple string arrays (lists).
- * Used for: Key Features, Dependencies, Assumptions, etc.
+ * Used for: Objectives, Success criteria, Assumptions, Relevant Facts
  *
  * UI: Simple list of text inputs with add/remove/reorder
  */
