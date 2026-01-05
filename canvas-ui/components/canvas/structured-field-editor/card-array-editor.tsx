@@ -255,7 +255,7 @@ export function CardArrayEditor({
   onSave,
   onCancel,
   isSaving,
-}: StructuredFieldEditorProps): React.ReactElement {
+}: StructuredFieldEditorProps & { fieldKey: keyof ReturnType<typeof transformFieldsToCanvas> | "personas" | "stakeholderMap" }): React.ReactElement {
   const [isActuallySaving, setIsActuallySaving] = React.useState(false);
 
   // Normalize value to array
@@ -358,7 +358,7 @@ export function CardArrayEditor({
   // Implement the save functionality from CanvasPreviewPage
   const handleSaveChanges = async (): Promise<void> => {
     setIsActuallySaving(true);
-    
+
     try {
       // Get canvas ID from sessionStorage
       const canvasId = sessionStorage.getItem("canvasId");
@@ -378,8 +378,8 @@ export function CardArrayEditor({
       const canvas = transformFieldsToCanvas(canvasJson);
 
       // Update the specific field with current value
-      if (canvas[fieldKey]) {
-        canvas[fieldKey].value = value;
+      if (fieldKey in canvas) {
+        (canvas as any)[fieldKey].value = value;
       }
 
       // Convert to backend payload format
@@ -389,7 +389,7 @@ export function CardArrayEditor({
       const url = API_ENDPOINTS.canvasSave(canvasId);
       const res = await fetch(url, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${sessionStorage.getItem("authToken") || ""}`,
         },
@@ -401,22 +401,21 @@ export function CardArrayEditor({
       }
 
       const data = await res.json();
-      
+
       // Update sessionStorage with new data
       sessionStorage.setItem("canvasJson", JSON.stringify(data.fields || data));
-      
+
       toast.success("Canvas saved successfully!");
-      
+
       // Call the original onSave callback if provided
       if (onSave) {
         onSave();
       }
-      
+
       // Reload the page after a short delay to show the toast
       setTimeout(() => {
         window.location.reload();
       }, 500);
-      
     } catch (error) {
       toast.error("Failed to save canvas");
       console.error("Failed to save canvas:", error);
