@@ -9,50 +9,69 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   lock:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@CHECKOUT_FULL_SHA
         with:
           fetch-depth: 0
-          persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Setup Python (no action)
+        run: |
+          python3 --version || true
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip
+          python3 -m pip install --upgrade pip
 
       - name: Install pip-tools
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pip-tools
+          python3 -m pip install pip-tools
 
       - name: Generate canvas-be/requirements.lock
         run: |
           pip-compile --generate-hashes --allow-unsafe \
             --output-file canvas-be/requirements.lock canvas-be/requirements.txt
 
-      - name: Detect changes
-        id: diff
+      - name: Create branch + commit if changed
+        id: commit
         run: |
-          if [[ -n "$(git status --porcelain -- canvas-be/requirements.lock)" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          set -euo pipefail
 
-      - name: Create PR to backend (using PAT)
-        if: steps.diff.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.PR_CREATOR_TOKEN }}
-          branch: "automation/backend-update-requirements-lock"
-          base: "backend"
-          commit-message: "chore(canvas-be): update requirements.lock"
-          title: "chore(canvas-be): update requirements.lock"
-          body: "Regenerates canvas-be/requirements.lock (with hashes) from canvas-be/requirements.txt."
-          delete-branch: true
-          add-paths: |
-            canvas-be/requirements.lock
+          # Detect changes including new/untracked file
+          if [[ -z "$(git status --porcelain -- canvas-be/requirements.lock)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes in requirements.lock"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          # Branch name (unique per run)
+          BRANCH="automation/requirements-lock-$(date +%Y%m%d-%H%M%S)"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add canvas-be/requirements.lock
+          git commit -m "chore(canvas-be): update requirements.lock"
+
+      - name: Push branch to origin
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          # Uses the default GITHUB_TOKEN to push the branch
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="${{ steps.commit.outputs.branch }}"
+
+          # Push using token auth
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --set-upstream origin "$BRANCH"
+
+          echo "Branch pushed: $BRANCH"
+          echo "Create PR manually from GitHub UI (backend <- $BRANCH)"
