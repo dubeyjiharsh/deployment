@@ -23,10 +23,11 @@ BMC_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "metric": {"type": "string"},
+                    "baseline": {"type": "string"},
                     "target": {"type": "string"},
                     "measurement_frequency": {"type": "string"}
                 },
-                "required": ["metric", "target", "measurement_frequency"]
+                "required": ["metric", "baseline", "target", "measurement_frequency"]
             },
             "description": "Key Performance Indicators"
         },
@@ -42,7 +43,7 @@ BMC_SCHEMA = {
                 "properties": {
                     "feature": {"type": "string"},
                     "description": {"type": "string"},
-                    "priority": {"type": "string", "enum": ["High", "Medium", "Low"]}
+                    "priority": {"type": "string", "enum": ["P1", "P2", "P3"]}
                 },
                 "required": ["feature", "description", "priority"]
             },
@@ -54,11 +55,9 @@ BMC_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "risk": {"type": "string"},
-                    "impact": {"type": "string", "enum": ["High", "Medium", "Low"]},
-                    "probability": {"type": "string", "enum": ["High", "Medium", "Low"]},
                     "mitigation": {"type": "string"}
                 },
-                "required": ["risk", "impact", "probability", "mitigation"]
+                "required": ["risk", "mitigation"]
             },
             "description": "Identified risks with mitigation strategies"
         },
@@ -86,9 +85,10 @@ BMC_SCHEMA = {
                 "properties": {
                     "use_case": {"type": "string"},
                     "actor": {"type": "string"},
-                    "description": {"type": "string"}
+                    "goal": {"type": "string"},
+                    "scenario": {"type": "string"},
                 },
-                "required": ["use_case", "actor", "description"]
+                "required": ["use_case", "actor", "goal", "scenario"]
             },
             "description": "Primary use cases"
         }

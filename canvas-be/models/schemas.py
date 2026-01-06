@@ -34,8 +34,7 @@ class MessageResponse(BaseModel):
     """Response for sending a message"""
     canvas_id: str
     chat_response: str
-    canvas_json: Dict[str, Any]
-    conversation_history: List[ConversationMessage]
+    canvas_json: Optional[Dict[str, Any]] = None
  
 class ConversationHistoryResponse(BaseModel):
     """Response for conversation history"""
@@ -53,18 +52,17 @@ class CanvasList(BaseModel):
  
 class KPIItem(BaseModel):
     metric: str
+    baseline: str
     target: str
     measurement_frequency: str
  
 class KeyFeatureItem(BaseModel):
     feature: str
     description: str
-    priority: str  # Should be one of ["High", "Medium", "Low"]
+    priority: str  
  
 class RiskItem(BaseModel):
-    risk: str
-    impact: str  # Should be one of ["High", "Medium", "Low"]
-    probability: str  # Should be one of ["High", "Medium", "Low"]
+    risk: str 
     mitigation: str
  
 class NonFunctionalRequirementItem(BaseModel):

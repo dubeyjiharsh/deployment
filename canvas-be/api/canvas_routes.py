@@ -5,7 +5,6 @@ from models.schemas import (
     CanvasListResponse,
     CanvasList
 )
-from services.assistant_service import AssistantService
 from services.export_service import ExportService
 from db.postgres_store import postgres_store
 from typing import Dict, Any
@@ -13,8 +12,6 @@ from typing import Dict, Any
 router = APIRouter(prefix="/api/canvas", tags=["Canvas Management"])
 
 # Initialize services
-assistant_service = AssistantService()
-assistant_id = assistant_service.create_assistant()
 exp_service = ExportService()
 
 @router.post("/create/{user_id}", response_model=CreateCanvasResponse)
@@ -28,15 +25,10 @@ async def create_canvas(user_id: str):
     Returns:
         canvas_id: Unique identifier for the canvas session (UUID)
     """
-    try:
-        # Create new thread for the canvas
-        thread_id = assistant_service.create_thread()
-        
+    try:        
         # Store in PostgreSQL
         canvas_id = postgres_store.create_canvas(
             user_id=user_id,
-            thread_id=thread_id,
-            assistant_id=assistant_id,
             name="Untitled Canvas",
             status="created"
         )
@@ -195,10 +187,6 @@ async def delete_canvas(canvas_id: str, action: str = "archive"):
             }
         
         elif action == "delete":
-        
-            # Optional: Cleanup Azure resources
-            assistant_service.delete_assistant(canvas["assistant_id"])
-            assistant_service.delete_thread(canvas["thread_id"])
             
             # Delete from database
             postgres_store.delete_canvas(canvas_id)

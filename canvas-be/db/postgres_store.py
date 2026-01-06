@@ -8,42 +8,11 @@ class PostgresStore:
  
     def __init__(self):
         pass
- 
-    def update_canvas_name(self, canvas_id: str, new_name: str) -> bool:
-        """
-        Update the name (title) of a canvas in the canvas table
-        Args:
-            canvas_id: Canvas UUID
-            new_name: New title for the canvas
-        Returns:
-            True if successful
-        """
-        conn = get_db_connection()
-        cur = get_db_cursor(conn)
-        try:
-            cur.execute(
-                """
-                UPDATE canvas
-                SET name = %s
-                WHERE canvas_id = %s
-                """,
-                (new_name, canvas_id)
-            )
-            conn.commit()
-            return cur.rowcount > 0
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Failed to update canvas name: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
     # ==================== CANVAS TABLE OPERATIONS ====================
     
     def create_canvas(
         self,
         user_id: str,
-        thread_id: str,
-        assistant_id: str,
         name: str = "Untitled Canvas",
         status: str = "created"
     ) -> str:
@@ -70,18 +39,16 @@ class PostgresStore:
             cur.execute(
                 """
                 INSERT INTO canvas (
-                    canvas_id, name, status, assistant_id, thread_id,
+                    canvas_id, name, status,
                     file_ids, conversation_metadata
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING canvas_id
                 """,
                 (
                     canvas_id,
                     name,
                     status,
-                    assistant_id,
-                    thread_id,
                     [],  # empty file_ids array
                     json.dumps(conversation_metadata)  # empty conversation_metadata
                 )
@@ -93,6 +60,37 @@ class PostgresStore:
         except Exception as e:
             conn.rollback()
             raise Exception(f"Failed to create canvas: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    def update_canvas(self, canvas_id: str, new_name: str, thread_id: str=None) -> bool:
+        """
+        Update the name (title) of a canvas in the canvas table
+        Args:
+            canvas_id: Canvas UUID
+            new_name: New title for the canvas
+            thread_id: Azure OpenAI previous response ID
+        Returns:
+            True if successful
+        """
+        conn = get_db_connection()
+        cur = get_db_cursor(conn)
+        try:
+            cur.execute(
+                """
+                UPDATE canvas
+                SET name = %s,
+                thread_id = %s
+                WHERE canvas_id = %s
+                """,
+                (new_name, thread_id, canvas_id)
+            )
+            conn.commit()
+            return cur.rowcount > 0
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Failed to update canvas name: {str(e)}")
         finally:
             cur.close()
             conn.close()

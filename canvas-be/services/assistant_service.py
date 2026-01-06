@@ -19,7 +19,7 @@ class AssistantService:
         """Create a new assistant with the system prompt"""
         assistant = self.client.beta.assistants.create(
             name="Business Canvas Assistant",
-            model=settings.AZURE_OPENAI_MODEL,
+            model=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
             instructions=get_system_prompt(),
             tools=[{"type": "file_search"}],
         )
