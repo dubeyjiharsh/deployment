@@ -1,4 +1,4 @@
-name: CodeQL then Build & Push canvas-be to GHCR
+name: Backend CodeQL then Build & Push canvas-be to GHCR
 
 on:
   workflow_dispatch:
