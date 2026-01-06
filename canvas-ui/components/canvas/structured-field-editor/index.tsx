@@ -152,7 +152,7 @@ function renderEditor(
       return <TimelineEditor {...props} />;
 
     case "card-array":
-      return <CardArrayEditor {...props} />;
+      return <CardArrayEditor {...props} fieldKey={props.fieldKey as Exclude<typeof props.fieldKey, string>} />;
 
     case "governance":
       return <GovernanceEditor {...props} />;
@@ -161,7 +161,7 @@ function renderEditor(
     //   return <BudgetEditor {...props} />;
 
     case "simple-list":
-      return <SimpleListEditor {...props} />;
+      return <SimpleListEditor {...props} fieldKey={props.fieldKey as Exclude<typeof props.fieldKey, string>} />;
 
     case "text":
     case "unknown-object":
