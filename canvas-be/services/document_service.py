@@ -9,19 +9,19 @@ import json
 import logging
 
 def generate_document_path(extension=".docx"):
-    # Securely creates a file in the system temp directory with 600 permissions
-    # delete=False ensures the file persists for subsequent service logic
+    """
+    Securely creates a file in the system temp directory with 600 permissions.
+    delete=False ensures the file persists for subsequent service logic.
+    Returns the file path.
+    """
     tmp = tempfile.NamedTemporaryFile(
         prefix="canvas_",
         suffix=extension,
         delete=False
     )
+    # Set permissions to 0o600 (owner read/write only)
+    os.chmod(tmp.name, 0o600)
     return tmp.name
-
-FIELD_DISPLAY_NAMES = {
-    "kpis": "KPIs",
-    # Add more custom mappings if needed
-}
 
 class ExportService:
     """Service for generating DOCX and PDF documents from canvas data"""
@@ -47,6 +47,7 @@ class ExportService:
                 "use cases"
             }
         }
+
 
     @staticmethod
     def _normalize_table_data(value):
@@ -90,12 +91,12 @@ class ExportService:
 
         for key, value in canvas_data.items():
             key_clean = key.replace("_", " ").lower().strip()
+
             # Only skip normalized exclude fields, but keep relevant facts
             if key == "Title" or key_clean in config["exclude"] or not value:
                 continue
 
-            display_name = FIELD_DISPLAY_NAMES.get(key_clean, key.replace("_", " ").title())
-            doc.add_heading(display_name, level=1)
+            doc.add_heading(key.replace("_", " ").title(), level=1)
 
             # TABLE LOGIC (KPIs, Key Features, Risks, NFRs, Use Cases)
             if key_clean in table_keys and isinstance(value, list):
@@ -115,10 +116,6 @@ class ExportService:
                         row_cells = table.add_row().cells
                         for i, col in enumerate(columns):
                             row_cells[i].text = str(entry.get(col, ""))
-                else:
-                    # Fallback to bullet points if data isn't structured
-                    for item in value:
-                        doc.add_paragraph(str(item), style="List Bullet")
 
             # LIST FIELDS (Simple strings in a list)
             elif isinstance(value, list):
@@ -163,12 +160,28 @@ class ExportService:
 
         for key, value in canvas_data.items():
             key_clean = key.replace("_", " ").lower().strip()
+
+            # Remove 'item 1' and 'item 2' from KPIs, Key Features, Use Cases, and Risks
+            if key_clean in ["kpis", "key features", "use cases", "risks"] and isinstance(value, list):
+                filtered_value = []
+                for item in value:
+                    if isinstance(item, dict):
+                        metric = item.get("metric", "").strip().lower()
+                        feature = item.get("feature", "").strip().lower()
+                        use_case = item.get("use_case", "").strip().lower()
+                        risk = item.get("risk", "").strip().lower()
+                        if metric not in ["item 1", "item 2"] and feature not in ["item 1", "item 2"] and use_case not in ["item 1", "item 2"] and risk not in ["item 1", "item 2"]:
+                            filtered_value.append(item)
+                    else:
+                        if str(item).strip().lower() not in ["item 1", "item 2"]:
+                            filtered_value.append(item)
+                value = filtered_value
+
             # Only skip normalized exclude fields, but keep relevant facts
             if key == "Title" or key_clean in config["exclude"] or not value:
                 continue
 
-            display_name = FIELD_DISPLAY_NAMES.get(key_clean, key.replace("_", " ").title())
-            elements.append(Paragraph(display_name, styles["Heading1"]))
+            elements.append(Paragraph(key.replace("_", " ").title(), styles["Heading1"]))
             elements.append(Spacer(1, 6))
 
             # TABLE LOGIC
@@ -220,3 +233,5 @@ class ExportService:
 
         doc.build(elements)
         return temp_file
+
+ 

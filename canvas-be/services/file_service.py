@@ -76,7 +76,12 @@ class FileService:
         Returns:
             File ID from Azure OpenAI
         """
-        temp_path = os.path.join(settings.UPLOAD_DIR, f"temp_{file.filename}")
+        # Sanitize filename to prevent directory traversal
+        safe_filename = os.path.basename(file.filename)
+        temp_path = os.path.join(settings.UPLOAD_DIR, f"temp_{safe_filename}")
+        # Ensure the path stays within the intended upload directory
+        if not os.path.abspath(temp_path).startswith(os.path.abspath(settings.UPLOAD_DIR)):
+            raise ValueError("Invalid file path detected.")
         
         try:
             # Save file temporarily
