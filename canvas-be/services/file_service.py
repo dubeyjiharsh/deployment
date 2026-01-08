@@ -1,6 +1,8 @@
 import os
+import logging
 import aiofiles
-from typing import List
+from typing import List, Tuple
+from docx import Document
 from fastapi import UploadFile
 from openai import AzureOpenAI
 from config import settings
@@ -21,24 +23,48 @@ class FileService:
         if not os.path.exists(settings.UPLOAD_DIR):
             os.makedirs(settings.UPLOAD_DIR)
     
-    async def upload_files(self, files: List[UploadFile]) -> List[str]:
+    async def upload_files(self, files: List[UploadFile]) -> Tuple[List[str], List[str]]:
         """
-        Upload files to Azure OpenAI and return file IDs
-        
-        Args:
-            files: List of uploaded files
-        
-        Returns:
-            List of file IDs
+        Upload supported files to Azure OpenAI and extract text from .docx files.
+        Returns tuple: (file_ids, docx_texts)
         """
         file_ids = []
-        
+        docx_texts = []
         for file in files:
-            file_id = await self._upload_single_file(file)
-            if file_id:
-                file_ids.append(file_id)
-        
-        return file_ids
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext == ".pdf":
+                file_id = await self._upload_single_file(file)
+                if file_id:
+                    file_ids.append(file_id)
+            elif ext == ".docx":
+                text = await self._extract_docx_text(file)
+                if text:
+                    docx_texts.append(text)
+            else:
+                logging.warning(f"Unsupported file type: {file.filename}")
+        return file_ids, docx_texts
+
+    async def _extract_docx_text(self, file: UploadFile) -> str:
+        """
+        Extract text from a .docx file
+        """
+        temp_path = os.path.join(settings.UPLOAD_DIR, f"temp_{file.filename}")
+        try:
+            async with aiofiles.open(temp_path, 'wb') as f:
+                content = await file.read()
+                await f.write(content)
+            doc = Document(temp_path)
+            text = "\n".join([para.text for para in doc.paragraphs])
+            return text
+        except Exception as e:
+            logging.error(f"Error extracting text from docx {file.filename}: {e}")
+            return ""
+        finally:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception as e:
+                    logging.error(f"Error removing temp file {temp_path}: {e}")
     
     async def _upload_single_file(self, file: UploadFile) -> str:
         """
@@ -68,7 +94,7 @@ class FileService:
             return uploaded_file.id
         
         except Exception as e:
-            print(f"Error uploading file {file.filename}: {e}")
+            logging.error(f"Error uploading file {file.filename}: {e}")
             return None
         
         finally:
@@ -77,4 +103,4 @@ class FileService:
                 try:
                     os.remove(temp_path)
                 except Exception as e:
-                    print(f"Error removing temp file {temp_path}: {e}")
+                    logging.error(f"Error removing temp file {temp_path}: {e}")
