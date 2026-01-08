@@ -1,14 +1,14 @@
 import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({
-  url: "http://localhost:8081", 
-  realm: "canvas-realm",
-  clientId: "canvas-client",
+  url: import.meta.env.VITE_KEYCLOAK_URL, 
+  realm: import.meta.env.VITE_KEYCLOAK_REALM,
+  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
 });
 
 // Ensure authServerUrl is set correctly
 if (!keycloak.authServerUrl) {
-  keycloak.authServerUrl = "http://localhost:8081";
+  keycloak.authServerUrl = import.meta.env.VITE_KEYCLOAK_URL;
 }
 
 export const initKeycloak = (onAuthenticatedCallback: () => void) => {
