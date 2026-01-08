@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
+import { getToken } from "@/src/lib/auth";
  
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
@@ -115,7 +116,7 @@ export function CreateCanvasPage(): React.ReactElement {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+            "Authorization": `Bearer ${getToken()}`,
           },
         }
       );

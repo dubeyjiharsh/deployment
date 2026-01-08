@@ -26,6 +26,7 @@ import { formatDistanceToNow } from "date-fns";
 import { MoreVertical, Trash2 } from "lucide-react";
 import axios from "axios";
 import { API_ENDPOINTS } from '@/config/api';
+import { isAuthenticated, doLogin, getToken } from "@/src/lib/auth";
  
 export function DashboardPage(): React.ReactElement {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>("newest");
@@ -39,26 +40,73 @@ export function DashboardPage(): React.ReactElement {
   const [isDeleting, setIsDeleting] = useState(false);
  
   useEffect(() => {
+    const userId = sessionStorage.getItem("userId");
+    const authenticated = isAuthenticated();
+
+    console.log("DashboardPage - Auth check:", { authenticated, userId });
+
+    // Guard: If not authenticated, don't fetch - the App component will handle redirect
+    if (!authenticated) {
+      console.log("DashboardPage: Not authenticated, skipping fetch");
+      return;
+    }
+
+    if (!userId) {
+      console.warn("DashboardPage: No userId in session storage");
+      setError("User ID not found. Please try logging in again.");
+      // Clear session and redirect to login
+      setTimeout(() => {
+        sessionStorage.clear();
+        doLogin();
+      }, 2000);
+      return;
+    }
+
     const fetchCanvases = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const userId = sessionStorage.getItem("userId");
-        if (!userId) {
-          setError("User not logged in");
+        const token = getToken();
+        
+        if (!token) {
+          console.error("No token available");
+          setError("Authentication token not found. Please log in again.");
+          setTimeout(() => {
+            sessionStorage.clear();
+            doLogin();
+          }, 2000);
           return;
         }
-
+        
+        console.log("Fetching canvases for user:", userId);
+        
         const response = await axios.get(API_ENDPOINTS.canvasList(userId), {
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+            Authorization: `Bearer ${token}`,
           },
         });
-        setCanvases(response.data.canvases || []);
-        window.dispatchEvent(new Event("canvasListUpdated"));
-        console.log('Fetched canvases:', response.data.canvases);
-      } catch (err) {
-        setError("Failed to load canvases");
+
+        console.log("Raw API response:", response.data);
+
+        // Extract the canvases array from the API response
+        const data = Array.isArray(response.data.canvases) ? response.data.canvases : [];
+        console.log("Processed canvases:", data);
+        setCanvases(data);
+      } catch (err: any) {
+        console.error("Fetch error:", err);
+        
+        // Check if it's an authentication error
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError("Session expired. Redirecting to login...");
+          // Clear session and redirect to login
+          setTimeout(() => {
+            sessionStorage.clear();
+            localStorage.clear();
+            doLogin();
+          }, 2000);
+        } else {
+          setError("Failed to fetch canvases. Please try again.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -66,7 +114,7 @@ export function DashboardPage(): React.ReactElement {
 
     fetchCanvases();
   }, []);
- 
+
   const handleDeleteClick = (canvas: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setCanvasToDelete(canvas);
@@ -78,9 +126,19 @@ export function DashboardPage(): React.ReactElement {
 
     setIsDeleting(true);
     try {
-      await axios.post(API_ENDPOINTS.canvasDelete(canvasToDelete.canvas_id), {
+      const token = getToken();
+      
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        sessionStorage.clear();
+        localStorage.clear();
+        doLogin();
+        return;
+      }
+      
+      await axios.post(API_ENDPOINTS.canvasDelete(canvasToDelete.canvas_id), {}, {
         headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -89,9 +147,16 @@ export function DashboardPage(): React.ReactElement {
 
       setDeleteDialogOpen(false);
       setCanvasToDelete(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete canvas:", err);
-      alert("Failed to delete canvas. Please try again.");
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        alert("Session expired. Please log in again.");
+        sessionStorage.clear();
+        localStorage.clear();
+        doLogin();
+      } else {
+        alert("Failed to delete canvas. Please try again.");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -101,10 +166,9 @@ export function DashboardPage(): React.ReactElement {
     e.preventDefault();
     e.stopPropagation();
     
-    // Set session storage to signal CreateCanvasPage to restore history
     sessionStorage.setItem("canvasId", canvasId);
     sessionStorage.setItem("isEditingCanvas", "true");
-    sessionStorage.removeItem("chatState"); // Ensure fresh history fetch
+    sessionStorage.removeItem("chatState");
  
     navigate(`/canvas/create`);
   };
@@ -119,6 +183,9 @@ export function DashboardPage(): React.ReactElement {
       const bTime = new Date(b.created_at).getTime();
       return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
     });
+
+    console.log("Filtered canvases:", filtered.length);
+
     return filtered;
   }, [canvases, search, sortOrder]);
  

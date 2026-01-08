@@ -5,7 +5,8 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import { useEffect } from "react";
+import { useEffect } from "react"
+import { logout } from "@/src/lib/auth"
 
 
 export function SiteHeader() {
@@ -13,8 +14,8 @@ export function SiteHeader() {
   const isDashboardPage = pathname === "/";
 
   const handleLogout = () => {
-    sessionStorage.clear();
-    window.location.hash = linkTo("/login");
+    // Use the proper logout function that handles Keycloak logout
+    logout();
   };
 
   return (
