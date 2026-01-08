@@ -1,14 +1,14 @@
 import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL, 
-  realm: import.meta.env.VITE_KEYCLOAK_REALM,
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+  url: process.env.VITE_KEYCLOAK_URL || import.meta.env.VITE_KEYCLOAK_URL,
+  realm: process.env.VITE_KEYCLOAK_REALM || import.meta.env.VITE_KEYCLOAK_REALM,
+  clientId: process.env.VITE_KEYCLOAK_CLIENT_ID || import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
 });
 
 // Ensure authServerUrl is set correctly
 if (!keycloak.authServerUrl) {
-  keycloak.authServerUrl = import.meta.env.VITE_KEYCLOAK_URL;
+  keycloak.authServerUrl = process.env.VITE_KEYCLOAK_URL || import.meta.env.VITE_KEYCLOAK_URL;
 }
 
 export const initKeycloak = (onAuthenticatedCallback: () => void) => {
