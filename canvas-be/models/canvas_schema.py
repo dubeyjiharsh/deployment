@@ -67,16 +67,20 @@ BMC_SCHEMA = {
             "description": "Key assumptions underlying the business model"
         },
         "Non Functional Requirements": {
-            "type": "array",
-            "items": {
-                "type": "string",
-                "properties": {
-                    "category": {"type": "string"},
-                    "requirement": {"type": "string"}
-                },
-                "required": ["category", "requirement"]
+            "type": "object",
+            "properties": {
+                "Performance & Scalability": {"type": "array", "items": {"type": "string"}},
+                "Data Quality & Integration": {"type": "array", "items": {"type": "string"}},
+                "Reliability": {"type": "array", "items": {"type": "string"}},
+                "Security/Compliance/Privacy": {"type": "array", "items": {"type": "string"}}
             },
-            "description": "List of non-functional requirements"
+            "required": [
+                "Performance & Scalability",
+                "Data Quality & Integration",
+                "Reliability",
+                "Security/Compliance/Privacy"
+            ],
+            "description": "Dictionary of non-functional requirements with mandatory keys."
         },
         "Use Cases": {
             "type": "array",

@@ -1,4 +1,5 @@
 import uvicorn
+import logging
 import warnings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,11 +31,12 @@ app.include_router(canvas_routes.router)
 app.include_router(chat_routes.router)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) > 1:
         try:
             port = int(sys.argv[1])
         except ValueError:
-            print(f"Invalid port '{sys.argv[1]}', using default port 8025")
+            logging.warning(f"Invalid port '{sys.argv[1]}', using default port 8025")
             port = 8025
     else:
         port = 8025

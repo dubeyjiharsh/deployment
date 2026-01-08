@@ -1,11 +1,12 @@
 from typing import Optional, List
+import logging
 from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Body
 from models.schemas import (
     MessageResponse,
     ConversationHistoryResponse,
     CanvasFieldList
 )
-from services import assistant_service
+
 from services.responses_service import ResponsesService
 from services.file_service import FileService
 from db.postgres_store import postgres_store
@@ -72,7 +73,7 @@ async def send_message(
         # Validate canvas structure
         is_valid, errors = validate_canvas_structure(canvas_json)
         if not is_valid:
-            print(f"Warning: Canvas validation errors: {errors}")
+            logging.warning(f"Canvas validation errors: {errors}")
 
         # Save canvas fields to database
         try:
@@ -84,7 +85,7 @@ async def send_message(
             if canvas["status"] == "created":
                 postgres_store.update_status(canvas_id)
         except Exception as e:
-            print(f"Warning: Failed to save canvas fields: {str(e)}")
+            logging.warning(f"Failed to save canvas fields: {str(e)}")
             # Continue execution - we still want to return the response
 
         # Get updated conversation history

@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Tuple, Dict, Any
 from openai import OpenAI
 from config import settings
@@ -113,7 +114,7 @@ class ResponsesService:
             # Move to previous response
             previous_response_id = response.previous_response_id
 
-        return history
+        return history[::-1]
     
     def _extract_user_message(self, prompt_content: str) -> str:
         """
@@ -147,4 +148,4 @@ class ResponsesService:
         try:
             self.client.responses.delete(response_id)
         except Exception as e:
-            print(f"Error deleting response {response_id}: {e}")
+            logging.error(f"Error deleting response {response_id}: {e}")
