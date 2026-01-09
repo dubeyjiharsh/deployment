@@ -94,19 +94,22 @@ class ResponsesService:
             try:
                 chat_response, _ = parse_dual_response(response.output_text)
                 history.append({
-                        "role": "assistant",
-                        "content": chat_response
-                    })
+                    "role": "assistant",
+                    "content": chat_response
+                })
             except Exception:
-                    # Fallback if parsing fails
-                    history.append({
-                        "role": "assistant",
-                        "content": response.output_text
-                    })
-        
+                # Fallback if parsing fails
+                history.append({
+                    "role": "assistant",
+                    "content": response.output_text
+                })
+
             # Get user message for the current response
-            message = self.client.responses.input_items.list(previous_response_id).data[0].content[0].text
-            parsed_content = self._extract_user_message(message)
+            input_items = self.client.responses.input_items.list(previous_response_id).data[0].content
+            for item in input_items:
+                if getattr(item, "type", None) == "input_text" and hasattr(item, "text"):
+                    parsed_content = self._extract_user_message(item.text)
+
             history.append({
                 "role": "user",
                 "content": parsed_content

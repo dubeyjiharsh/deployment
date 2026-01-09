@@ -1,7 +1,7 @@
 import os
 import logging
 import aiofiles
-from typing import List, Tuple
+from typing import List
 from docx import Document
 from fastapi import UploadFile
 from openai import AzureOpenAI
@@ -22,50 +22,7 @@ class FileService:
         """Ensure upload directory exists"""
         if not os.path.exists(settings.UPLOAD_DIR):
             os.makedirs(settings.UPLOAD_DIR)
-    
-    async def upload_files(self, files: List[UploadFile]) -> Tuple[List[str], List[str]]:
-        """
-        Upload supported files to Azure OpenAI and extract text from .docx files.
-        Returns tuple: (file_ids, docx_texts)
-        """
-        file_ids = []
-        docx_texts = []
-        for file in files:
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext == ".pdf":
-                file_id = await self._upload_single_file(file)
-                if file_id:
-                    file_ids.append(file_id)
-            elif ext == ".docx":
-                text = await self._extract_docx_text(file)
-                if text:
-                    docx_texts.append(text)
-            else:
-                logging.warning(f"Unsupported file type: {file.filename}")
-        return file_ids, docx_texts
 
-    async def _extract_docx_text(self, file: UploadFile) -> str:
-        """
-        Extract text from a .docx file
-        """
-        temp_path = os.path.join(settings.UPLOAD_DIR, f"temp_{file.filename}")
-        try:
-            async with aiofiles.open(temp_path, 'wb') as f:
-                content = await file.read()
-                await f.write(content)
-            doc = Document(temp_path)
-            text = "\n".join([para.text for para in doc.paragraphs])
-            return text
-        except Exception as e:
-            logging.error(f"Error extracting text from docx {file.filename}: {e}")
-            return ""
-        finally:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except Exception as e:
-                    logging.error(f"Error removing temp file {temp_path}: {e}")
-    
     async def _upload_single_file(self, file: UploadFile) -> str:
         """
         Upload a single file to Azure OpenAI
@@ -109,3 +66,32 @@ class FileService:
                     os.remove(temp_path)
                 except Exception as e:
                     logging.error(f"Error removing temp file {temp_path}: {e}")
+    
+    async def upload_files(self, files: List[UploadFile]) -> List[str]:
+        """
+        Upload only PDF files to Azure OpenAI
+        Returns list of file IDs
+        Limits the number of attachments to 10.
+        """
+        if len(files) > 10:
+            raise ValueError("A maximum of 10 attachments is allowed.")
+        
+        allowed_file_types = [".pdf"]
+        allowed_file_size = 5 * 1024 * 1024  # 5MB
+        file_ids = []
+        for file in files:
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in allowed_file_types:
+                raise ValueError(f"Unsupported file type: {file.filename}. Only {', '.join(allowed_file_types)} files are allowed.")
+            
+            # Check file size (5MB = 5 * 1024 * 1024 bytes)
+            contents = await file.read()
+            if len(contents) > allowed_file_size:
+                raise ValueError(f"File '{file.filename}' exceeds the {allowed_file_size} bytes size limit.")
+            # Reset file pointer for actual upload
+            await file.seek(0)
+
+            file_id = await self._upload_single_file(file)
+            if file_id:
+                file_ids.append(file_id)
+        return file_ids

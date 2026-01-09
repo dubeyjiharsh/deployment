@@ -57,7 +57,10 @@ async def send_message(
         # Upload files if provided
         new_file_ids = []
         if files:
-            new_file_ids = await file_service.upload_files(files)
+            try:
+                new_file_ids = await file_service.upload_files(files)
+            except ValueError as ve:
+                raise HTTPException(status_code=422, detail=str(ve))
             # Add to database
             for file_id in new_file_ids:
                 postgres_store.add_file_to_canvas(canvas_id, file_id)

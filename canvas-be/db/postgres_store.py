@@ -269,45 +269,54 @@ class PostgresStore:
         try:
             # Helper functions for type conversion
             def to_array(val):
-                """Convert value to PostgreSQL array format"""
+                """Convert value to PostgreSQL array format (text[])."""
                 if isinstance(val, list):
-                    # If list contains dicts, convert each dict to JSON string
-                    if val and isinstance(val[0], dict):
-                        return [json.dumps(item) for item in val]
-                    return val
+                    return [str(x) for x in val]
                 elif val is not None:
-                    return [val]
+                    return [str(val)]
                 else:
                     return []
-            
+
+            def dict_list_to_text_array(val):
+                """Convert list of dicts to text[] as readable JSON strings or summaries."""
+                if isinstance(val, list):
+                    return [json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else str(x) for x in val]
+                return []
+
             def to_jsonb(val):
                 """Convert value to JSONB format"""
                 if val is None:
                     return json.dumps({})
                 return json.dumps(val) if not isinstance(val, str) else val
-            
-            def to_text(val):
-                """Convert value to text"""
-                if isinstance(val, list):
-                    # Join list items as text with newlines
-                    return "\n".join(json.dumps(x) if isinstance(x, dict) else str(x) for x in val)
-                return str(val) if val is not None else None
-            
-            # Map canvas data to database fields
+
+            def flatten_nfr(nfr_dict):
+                if not isinstance(nfr_dict, dict):
+                    return []
+                result = []
+                for k, v in nfr_dict.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            result.append(f"{k}: {item}")
+                    else:
+                        result.append(f"{k}: {v}")
+                return result
+
+            # Map canvas data to database fields, serializing as needed
             fields = {
                 "canvas_id": canvas_id,
                 "title": canvas_data.get("Title", "Untitled"),
                 "problem_statement": canvas_data.get("Problem Statement"),
                 "objectives": to_array(canvas_data.get("Objectives")),
-                "kpis": to_array(canvas_data.get("KPIs")),
+                "kpis": dict_list_to_text_array(canvas_data.get("KPIs")),
                 "success_criteria": to_jsonb(canvas_data.get("Success Criteria")),
-                "key_features": to_array(canvas_data.get("Key Features")),
-                "relevant_facts": canvas_data.get("Relevant Facts"),
-                "risks": to_array(canvas_data.get("Risks")),
+                "key_features": dict_list_to_text_array(canvas_data.get("Key Features")),
+                "relevant_facts": to_array(canvas_data.get("Relevant Facts", [])),
+                "risks": dict_list_to_text_array(canvas_data.get("Risks")),
                 "assumptions": to_array(canvas_data.get("Assumptions")),
-                "non_functional_requirements": to_array(canvas_data.get("Non Functional Requirements") if canvas_data.get("Non Functional Requirements") else []),
-                "use_cases": to_array(canvas_data.get("Use Cases")),
-                "governance": to_jsonb(canvas_data.get("Governance")),
+                # Convert Non Functional Requirements dict to flat list of strings for TEXT[] column
+                "non_functional_requirements": flatten_nfr(canvas_data.get("Non Functional Requirements")),
+                "use_cases": dict_list_to_text_array(canvas_data.get("Use Cases")),
+                "governance": to_jsonb(canvas_data.get("Governance", [])),
                 "tags": to_array(canvas_data.get("Tags", []))
             }
             
