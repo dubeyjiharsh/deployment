@@ -1,18 +1,67 @@
+# Python Docker ignore - common patterns
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
 .env
-.venv
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-env
-venv
-ENV
-env.bak
-venv.bak
+.python-version
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.tox/
+.nox/
+.pytest_cache/
+.coverage
+
+# PyInstaller
+*.manifest
+*.spec
+
+# PEP 582
+__pypackages__/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
 .git
 .gitignore
-README.md
-docs
-temp_uploads
-.DS_Store
+
+# Application-specific
+temp_uploads/
+*.log
+
+# Ignore documentation and license files
+*.md
+LICENSE
