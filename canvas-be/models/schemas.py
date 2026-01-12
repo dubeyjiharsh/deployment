@@ -34,8 +34,7 @@ class MessageResponse(BaseModel):
     """Response for sending a message"""
     canvas_id: str
     chat_response: str
-    canvas_json: Dict[str, Any]
-    conversation_history: List[ConversationMessage]
+    canvas_json: Optional[Dict[str, Any]] = None
  
 class ConversationHistoryResponse(BaseModel):
     """Response for conversation history"""
@@ -52,29 +51,31 @@ class CanvasList(BaseModel):
     problem_statement: str
  
 class KPIItem(BaseModel):
-    metric: str
+    metric : str
+    baseline: str
     target: str
     measurement_frequency: str
  
 class KeyFeatureItem(BaseModel):
     feature: str
     description: str
-    priority: str  # Should be one of ["High", "Medium", "Low"]
+    priority: str  # Should be one of ["P1", "P2", "P3"]
  
 class RiskItem(BaseModel):
     risk: str
-    impact: str  # Should be one of ["High", "Medium", "Low"]
-    probability: str  # Should be one of ["High", "Medium", "Low"]
     mitigation: str
  
 class NonFunctionalRequirementItem(BaseModel):
-    category: str
-    requirement: str
+    performance: List[str]= Field(..., alias="Performance & Scalability")
+    data_quality: List[str]= Field(..., alias="Data Quality & Integration")
+    reliability: List[str]= Field(..., alias="Reliability")
+    security: List[str]= Field(..., alias="Security/Compliance/Privacy")    
  
 class UseCaseItem(BaseModel):
     use_case: str
     actor: str
-    description: str
+    goal: str
+    scenario: str
  
 class CanvasFieldList(BaseModel):
     Title: str = Field(..., alias="Title")
@@ -85,7 +86,7 @@ class CanvasFieldList(BaseModel):
     Key_Features: List[KeyFeatureItem] = Field(..., alias="Key Features")
     Risks: List[RiskItem] = Field(..., alias="Risks")
     Assumptions: List[str] = Field(..., alias="Assumptions")
-    Non_Functional_Requirements: List[NonFunctionalRequirementItem] = Field(..., alias="Non Functional Requirements")
+    Non_Functional_Requirements: NonFunctionalRequirementItem = Field(..., alias="Non Functional Requirements")
     Use_Cases: List[UseCaseItem] = Field(..., alias="Use Cases")
     Governance: Optional[Dict[str, Any]] = Field(None, alias="Governance")
     Relevant_Facts: List[str] = Field(..., alias="Relevant Facts")  

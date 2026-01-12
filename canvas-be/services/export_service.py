@@ -8,6 +8,21 @@ import os
 import json
 import logging
 
+def generate_document_path(extension=".docx"):
+    # Securely creates a file in the system temp directory with 600 permissions
+    # delete=False ensures the file persists for subsequent service logic
+    tmp = tempfile.NamedTemporaryFile(
+        prefix="canvas_",
+        suffix=extension,
+        delete=False
+    )
+    return tmp.name
+
+FIELD_DISPLAY_NAMES = {
+    "kpis": "KPIs",
+    # Add more custom mappings if needed
+}
+
 class ExportService:
     """Service for generating DOCX and PDF documents from canvas data"""
 
@@ -79,7 +94,8 @@ class ExportService:
             if key == "Title" or key_clean in config["exclude"] or not value:
                 continue
 
-            doc.add_heading(key.replace("_", " ").title(), level=1)
+            display_name = FIELD_DISPLAY_NAMES.get(key_clean, key.replace("_", " ").title())
+            doc.add_heading(display_name, level=1)
 
             # TABLE LOGIC (KPIs, Key Features, Risks, NFRs, Use Cases)
             if key_clean in table_keys and isinstance(value, list):
@@ -120,7 +136,7 @@ class ExportService:
             else:
                 doc.add_paragraph(str(value))
 
-        temp_file = os.path.join(tempfile.gettempdir(), f"canvas_{os.urandom(4).hex()}.docx")
+        temp_file = generate_document_path(".docx")
         doc.save(temp_file)
         return temp_file
 
@@ -136,7 +152,7 @@ class ExportService:
         config = ExportService._get_clean_data()
         table_keys = config["tables"]
 
-        temp_file = os.path.join(tempfile.gettempdir(), f"canvas_{os.urandom(4).hex()}.pdf")
+        temp_file = generate_document_path(".pdf")
         doc = SimpleDocTemplate(temp_file, pagesize=letter)
         styles = getSampleStyleSheet()
         elements = []
@@ -151,7 +167,8 @@ class ExportService:
             if key == "Title" or key_clean in config["exclude"] or not value:
                 continue
 
-            elements.append(Paragraph(key.replace("_", " ").title(), styles["Heading1"]))
+            display_name = FIELD_DISPLAY_NAMES.get(key_clean, key.replace("_", " ").title())
+            elements.append(Paragraph(display_name, styles["Heading1"]))
             elements.append(Spacer(1, 6))
 
             # TABLE LOGIC

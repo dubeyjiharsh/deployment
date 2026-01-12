@@ -23,10 +23,11 @@ BMC_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "metric": {"type": "string"},
+                    "baseline": {"type": "string"},
                     "target": {"type": "string"},
                     "measurement_frequency": {"type": "string"}
                 },
-                "required": ["metric", "target", "measurement_frequency"]
+                "required": ["metric", "baseline", "target", "measurement_frequency"]
             },
             "description": "Key Performance Indicators"
         },
@@ -42,7 +43,7 @@ BMC_SCHEMA = {
                 "properties": {
                     "feature": {"type": "string"},
                     "description": {"type": "string"},
-                    "priority": {"type": "string", "enum": ["High", "Medium", "Low"]}
+                    "priority": {"type": "string", "enum": ["P1", "P2", "P3"]}
                 },
                 "required": ["feature", "description", "priority"]
             },
@@ -54,11 +55,9 @@ BMC_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "risk": {"type": "string"},
-                    "impact": {"type": "string", "enum": ["High", "Medium", "Low"]},
-                    "probability": {"type": "string", "enum": ["High", "Medium", "Low"]},
                     "mitigation": {"type": "string"}
                 },
-                "required": ["risk", "impact", "probability", "mitigation"]
+                "required": ["risk", "mitigation"]
             },
             "description": "Identified risks with mitigation strategies"
         },
@@ -68,16 +67,20 @@ BMC_SCHEMA = {
             "description": "Key assumptions underlying the business model"
         },
         "Non Functional Requirements": {
-            "type": "array",
-            "items": {
-                "type": "string",
-                "properties": {
-                    "category": {"type": "string"},
-                    "requirement": {"type": "string"}
-                },
-                "required": ["category", "requirement"]
+            "type": "object",
+            "properties": {
+                "Performance & Scalability": {"type": "array", "items": {"type": "string"}},
+                "Data Quality & Integration": {"type": "array", "items": {"type": "string"}},
+                "Reliability": {"type": "array", "items": {"type": "string"}},
+                "Security/Compliance/Privacy": {"type": "array", "items": {"type": "string"}}
             },
-            "description": "List of non-functional requirements"
+            "required": [
+                "Performance & Scalability",
+                "Data Quality & Integration",
+                "Reliability",
+                "Security/Compliance/Privacy"
+            ],
+            "description": "Dictionary of non-functional requirements with mandatory keys."
         },
         "Use Cases": {
             "type": "array",
@@ -86,9 +89,10 @@ BMC_SCHEMA = {
                 "properties": {
                     "use_case": {"type": "string"},
                     "actor": {"type": "string"},
-                    "description": {"type": "string"}
+                    "goal": {"type": "string"},
+                    "scenario": {"type": "string"},
                 },
-                "required": ["use_case", "actor", "description"]
+                "required": ["use_case", "actor", "goal", "scenario"]
             },
             "description": "Primary use cases"
         }
