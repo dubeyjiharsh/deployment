@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.VITE_API_BASE_URL ||import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const API_ENDPOINTS = {
   canvasList: (userId: string) => `${API_BASE_URL}/api/canvas/list/${userId}`,
