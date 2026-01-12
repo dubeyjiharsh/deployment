@@ -15,6 +15,7 @@ export function CreateCanvasPage(): React.ReactElement {
   const [canvasId, setCanvasId] = React.useState<string | null>(null);
   const [ideaError, setIdeaError] = React.useState<string | null>(null);
   const [showPreviewAlert, setShowPreviewAlert] = React.useState(false);
+  const [errorMessages, setErrorMessages] = React.useState<string[]>([]);
 
   const initialized = React.useRef(false);
  
@@ -105,14 +106,18 @@ export function CreateCanvasPage(): React.ReactElement {
     const maxSizeMB = 5;
     const maxFiles = 10;
 
+    const newErrors: string[] = [];
     let newFiles: File[] = Array.from(fileList).filter(file => {
       const ext = file.name.split('.').pop()?.toLowerCase();
-      return (
-        allowedTypes.includes(file.type) &&
-        ext &&
-        allowedExtensions.includes(ext) &&
-        file.size / (1024 * 1024) <= maxSizeMB
-      );
+      if (file.size / (1024 * 1024) > maxSizeMB) {
+        newErrors.push(`File ${file.name} exceeds the maximum size of ${maxSizeMB}MB.`);
+        return false;
+      }
+      if (!allowedTypes.includes(file.type) || !ext || !allowedExtensions.includes(ext)) {
+        newErrors.push(`File ${file.name} is unsupported file type.`);
+        return false;
+      }
+      return true;
     });
 
     newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
@@ -123,6 +128,8 @@ export function CreateCanvasPage(): React.ReactElement {
       // Ensure notification is triggered only once
       console.log(`${newFiles.length} file(s) uploaded successfully.`);
     }
+
+    setErrorMessages(newErrors);
   };
 
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -196,6 +203,21 @@ export function CreateCanvasPage(): React.ReactElement {
     navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`);
   };
  
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".error-container")) {
+        setErrorMessages([]);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="p-6 flex flex-col w-full max-w-3xl h-[90vh]">
@@ -226,6 +248,15 @@ export function CreateCanvasPage(): React.ReactElement {
         </div>
 
         <div className="w-full max-w-2xl mx-auto p-6 bg-white">
+          {errorMessages.length > 0 && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded error-container">
+              <ul className="list-disc pl-5">
+                {errorMessages.map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {showPreviewAlert && (
             <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center text-sm">Please enter a message or attach a file before previewing.</div>
           )}
@@ -262,25 +293,26 @@ export function CreateCanvasPage(): React.ReactElement {
           )}
           <div className="flex items-center w-full gap-2">
             <div className="flex flex-grow items-center relative">
-              <Textarea
-                value={idea}
-                onChange={(e) => {
-                  if (e.target.value.length <= 1000) setIdea(e.target.value);
-                }}
-                maxLength={1000}
-                placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-28"
-                disabled={isLoading}
-                minLength={10}
-                aria-invalid={!!ideaError}
-              />
-              <div className="absolute bottom-1 left-2 text-xs text-gray-400 select-none">
-                {idea.length}/1000
+              <div className="relative w-full">
+                <Textarea
+                  value={idea}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 1000) setIdea(e.target.value);
+                  }}
+                  maxLength={1000}
+                  placeholder="Type your message..."
+                  className="bg-white h-20 w-full"
+                  disabled={isLoading}
+                  minLength={10}
+                  aria-invalid={!!ideaError}
+                />
+                {ideaError && (
+                  <div className="text-red-500 text-xs mt-1 absolute left-0 top-full">{ideaError}</div>
+                )}
+                <div className="text-xs text-gray-400 select-none mt-1">
+                  {idea.length}/1000
+                </div>
               </div>
-              {/* <div className="absolute inset-y-0 right-0 flex items-center pr-2"> */}
-              {ideaError && (
-                <div className="text-red-500 text-xs mt-1 absolute left-0 top-full">{ideaError}</div>
-              )}
               <div className="flex items-center space-x-2 absolute right-5">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
@@ -292,7 +324,7 @@ export function CreateCanvasPage(): React.ReactElement {
                   </svg>
                 </button>
                 <button
-                  className="p-2 bg-blue-500 rounded-full text-white flex items-center justify-center"
+                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.length < 10 ? 'opacity-50' : 'opacity-100'}`}
                   onClick={handleSubmit}
                   disabled={isLoading || !idea || idea.length < 10}
                   aria-disabled={isLoading || !idea || idea.length < 10}
