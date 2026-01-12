@@ -25,7 +25,7 @@ import {
 } from "@/lib/validators/structured-field-schemas";
 import type { StructuredFieldEditorProps } from "./index";
 
-type GovernanceCategory = "approvers" | "reviewers";
+type GovernanceCategory = "approvers" | "reviewers" | "requirementLeads";
 
 /**
  * Normalizes value to GovernanceValue shape
@@ -40,9 +40,12 @@ function normalizeGovernance(value: unknown): GovernanceValue {
       reviewers: Array.isArray(v.reviewers)
         ? v.reviewers.map(normalizeGovPerson)
         : [],
+      requirementLeads: Array.isArray(v.requirementLeads)
+        ? v.requirementLeads.map(normalizeGovPerson)
+        : [],
     };
   }
-  return { approvers: [], reviewers: [] };
+  return { approvers: [], reviewers: [], requirementLeads: [] };
 }
 
 function normalizeGovPerson(p: unknown): GovernancePersonValue {
@@ -71,7 +74,7 @@ export function GovernanceEditor({
   const governance = React.useMemo(() => normalizeGovernance(value), [value]);
 
   const [expandedCategories, setExpandedCategories] = React.useState<Set<GovernanceCategory>>(
-    new Set(["approvers", "reviewers"])
+     new Set(["approvers", "reviewers", "requirementLeads"])
   );
 
   const toggleCategory = (category: GovernanceCategory) => {
@@ -128,10 +131,10 @@ export function GovernanceEditor({
     });
   };
 
-  const categories: GovernanceCategory[] = ["approvers", "reviewers"];
+  const categories: GovernanceCategory[] = ["approvers", "reviewers", "requirementLeads"];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       {categories.map((category) => {
         const people = governance[category];
         const isExpanded = expandedCategories.has(category);
@@ -197,7 +200,13 @@ export function GovernanceEditor({
                       className="w-full"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Add {category === "approvers" ? "Approver" : "Reviewer"}
+                      {category === "approvers"
+                        ? "Add Approver"
+                        : category === "reviewers"
+                        ? "Add Reviewer"
+                        : category === "requirementLeads"
+                        ? "Add Requirement Lead"
+                        : ""}
                     </Button>
                   </div>
                 </CardContent>
@@ -208,7 +217,7 @@ export function GovernanceEditor({
       })}
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2 pt-4 border-t">
+      <div className="flex items-center justify-end gap-2 pt-4 border-t bg-background sticky bottom-0 z-10">
         <Button variant="outline" onClick={onCancel} disabled={isSaving}>
           Cancel
         </Button>
@@ -283,7 +292,6 @@ function GovernancePersonCard({
           <div className="space-y-1.5">
             <Label htmlFor={`role-${index}`} className="text-xs text-muted-foreground">
               {GOVERNANCE_PERSON_FIELD_LABELS.role}
-              <span className="text-destructive ml-1">*</span>
             </Label>
             <Input
               id={`role-${index}`}
@@ -327,7 +335,7 @@ function GovernancePersonCard({
           variant="ghost"
           size="icon"
           onClick={onDelete}
-          className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
           aria-label="Delete person"
         >
           <Trash2 className="h-4 w-4" />

@@ -8,7 +8,12 @@
  *
  * UI: Cards with form fields, add/remove/reorder functionality
  * Dynamically renders fields based on field key configuration
+/**
+ * CardArrayEditor main component
+ * Renders a list of cards with add, remove, reorder, and edit functionality.
+ * Handles saving and canceling edits.
  */
+
 
 import * as React from "react";
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
@@ -26,14 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  PERSONA_FIELD_LABELS,
+  KPIS_CATEGORY_LABELS,
+  KEY_FEATURES_CATEGORY_LABELS,
+  RISKS_CATEGORY_LABELS,
   USE_CASE_FIELD_LABELS,
-  SUCCESS_CRITERIA_FIELD_LABELS,
-  STAKEHOLDER_LEVEL_LABELS,
-  RACI_ROLE_LABELS,
-  stakeholderLevels,
-  raciRoles,
-  type StakeholderLevel,
+
+
+  // PERSONA_FIELD_LABELS,
+  // SUCCESS_CRITERIA_FIELD_LABELS,
+  // STAKEHOLDER_LEVEL_LABELS,
+  // RACI_ROLE_LABELS,
+  // stakeholderLevels,
+  // raciRoles,
+  // type StakeholderLevel,
 } from "@/lib/validators/structured-field-schemas";
 import type { StructuredFieldEditorProps } from "./index";
 import { API_ENDPOINTS } from '@/config/api';
@@ -41,6 +51,7 @@ import { toast } from "sonner";
 
 type CardItem = Record<string, unknown>;
 
+// Configuration for a single field in a card (used to render form fields)
 interface FieldConfig {
   key: string;
   label: string;
@@ -51,69 +62,92 @@ interface FieldConfig {
 }
 
 /**
- * Get field configuration for different card types
+ * Returns the field configuration for different card types (personas, useCases, etc.)
+ * Used to dynamically render the correct fields for each card type in the editor UI.
  */
 function getFieldConfig(fieldKey: string): FieldConfig[] {
   switch (fieldKey) {
-    case "personas":
+
+    case "kpis":
       return [
-        { key: "name", label: PERSONA_FIELD_LABELS.name, type: "text", required: true, placeholder: "e.g., Tech-Savvy Professional" },
-        { key: "profile", label: PERSONA_FIELD_LABELS.profile, type: "textarea", placeholder: "Demographics and behavioral description..." },
-        { key: "needs", label: PERSONA_FIELD_LABELS.needs, type: "textarea", placeholder: "What this persona requires..." },
-        { key: "painPoints", label: PERSONA_FIELD_LABELS.painPoints, type: "textarea", placeholder: "Frustrations and challenges..." },
-        { key: "successDefinition", label: PERSONA_FIELD_LABELS.successDefinition, type: "textarea", placeholder: "How success is measured..." },
+        { key: "baseline", label: KPIS_CATEGORY_LABELS.baseline, type: "text", placeholder: "Current value..." },
+        { key: "metric", label: KPIS_CATEGORY_LABELS.metric, type: "text", placeholder: "Metric being measured..." },
+        { key: "target", label: KPIS_CATEGORY_LABELS.target, type: "textarea", placeholder: "Target value..." },
+        { key: "measurementFrequency", label: KPIS_CATEGORY_LABELS.measurementFrequency, type: "textarea", placeholder: "How often it's measured..." },
+      ];
+
+    case "keyFeatures":
+      return [
+        { key: "description", label: KEY_FEATURES_CATEGORY_LABELS.description, type: "textarea", required: true, placeholder: "Feature description..." },
+        { key: "features", label: KEY_FEATURES_CATEGORY_LABELS.features, type: "textarea", placeholder: "List of features..." },
+      ];
+
+    case "risks":
+      return [
+        { key: "risk", label: RISKS_CATEGORY_LABELS.risk, type: "textarea", required: true, placeholder: "Describe the risk..." },
+        { key: "mitigation", label: RISKS_CATEGORY_LABELS.mitigation, type: "textarea", placeholder: "Mitigation strategies..." },
       ];
 
     case "useCases":
       return [
-        { key: "name", label: USE_CASE_FIELD_LABELS.name, type: "text", required: true, placeholder: "e.g., User Authentication Flow" },
+        { key: "useCases", label: USE_CASE_FIELD_LABELS.useCases, type: "text", placeholder: "e.g., UseCase 1" },
         { key: "actor", label: USE_CASE_FIELD_LABELS.actor, type: "text", placeholder: "Who performs this action..." },
         { key: "goal", label: USE_CASE_FIELD_LABELS.goal, type: "textarea", placeholder: "What they want to achieve..." },
         { key: "scenario", label: USE_CASE_FIELD_LABELS.scenario, type: "textarea", placeholder: "Step-by-step description..." },
       ];
 
-    case "stakeholderMap":
-      return [
-        { key: "name", label: "Name", type: "text", required: true, placeholder: "e.g., John Smith" },
-        { key: "role", label: "Role", type: "text", placeholder: "e.g., Product Owner" },
-        {
-          key: "influence",
-          label: "Influence",
-          type: "select",
-          options: stakeholderLevels.map(level => ({
-            value: level,
-            label: STAKEHOLDER_LEVEL_LABELS[level],
-          })),
-        },
-        {
-          key: "interest",
-          label: "Interest",
-          type: "select",
-          options: stakeholderLevels.map(level => ({
-            value: level,
-            label: STAKEHOLDER_LEVEL_LABELS[level],
-          })),
-        },
-        {
-          key: "raciRole",
-          label: "RACI Role",
-          type: "select",
-          options: [
-            { value: "", label: "Not assigned" },
-            ...raciRoles.map(role => ({
-              value: role,
-              label: RACI_ROLE_LABELS[role],
-            })),
-          ],
-        },
-      ];
 
-    case "successCriteria":
-      return [
-        { key: "metric", label: SUCCESS_CRITERIA_FIELD_LABELS.metric, type: "text", required: true, placeholder: "e.g., User Adoption Rate" },
-        { key: "target", label: SUCCESS_CRITERIA_FIELD_LABELS.target, type: "text", placeholder: "e.g., 70% within 3 months" },
-        { key: "measurement", label: SUCCESS_CRITERIA_FIELD_LABELS.measurement, type: "textarea", placeholder: "How the metric will be calculated..." },
-      ];
+
+    // case "personas":
+    //   return [
+    //     { key: "name", label: PERSONA_FIELD_LABELS.name, type: "text", required: true, placeholder: "e.g., Tech-Savvy Professional" },
+    //     { key: "profile", label: PERSONA_FIELD_LABELS.profile, type: "textarea", placeholder: "Demographics and behavioral description..." },
+    //     { key: "needs", label: PERSONA_FIELD_LABELS.needs, type: "textarea", placeholder: "What this persona requires..." },
+    //     { key: "painPoints", label: PERSONA_FIELD_LABELS.painPoints, type: "textarea", placeholder: "Frustrations and challenges..." },
+    //     { key: "successDefinition", label: PERSONA_FIELD_LABELS.successDefinition, type: "textarea", placeholder: "How success is measured..." },
+    //   ];
+    // case "stakeholderMap":
+    //   return [
+    //     { key: "name", label: "Name", type: "text", required: true, placeholder: "e.g., John Smith" },
+    //     { key: "role", label: "Role", type: "text", placeholder: "e.g., Product Owner" },
+    //     {
+    //       key: "influence",
+    //       label: "Influence",
+    //       type: "select",
+    //       options: stakeholderLevels.map(level => ({
+    //         value: level,
+    //         label: STAKEHOLDER_LEVEL_LABELS[level],
+    //       })),
+    //     },
+    //     {
+    //       key: "interest",
+    //       label: "Interest",
+    //       type: "select",
+    //       options: stakeholderLevels.map(level => ({
+    //         value: level,
+    //         label: STAKEHOLDER_LEVEL_LABELS[level],
+    //       })),
+    //     },
+    //     {
+    //       key: "raciRole",
+    //       label: "RACI Role",
+    //       type: "select",
+    //       options: [
+    //         { value: "", label: "Not assigned" },
+    //         ...raciRoles.map(role => ({
+    //           value: role,
+    //           label: RACI_ROLE_LABELS[role],
+    //         })),
+    //       ],
+    //     },
+    //   ];
+
+    // case "successCriteria":
+    //   return [
+    //     { key: "metric", label: SUCCESS_CRITERIA_FIELD_LABELS.metric, type: "text", required: true, placeholder: "e.g., User Adoption Rate" },
+    //     { key: "target", label: SUCCESS_CRITERIA_FIELD_LABELS.target, type: "text", placeholder: "e.g., 70% within 3 months" },
+    //     { key: "measurement", label: SUCCESS_CRITERIA_FIELD_LABELS.measurement, type: "textarea", placeholder: "How the metric will be calculated..." },
+    //   ];
 
     default:
       // For unknown array types, derive fields from first item
@@ -122,7 +156,8 @@ function getFieldConfig(fieldKey: string): FieldConfig[] {
 }
 
 /**
- * Get display title for a card item
+ * Returns a display title for a card item, falling back to a default if not present.
+ * Used for the card header display in the UI.
  */
 function getCardTitle(item: CardItem, fieldKey: string, index: number): string {
   const name = item.name || item.title || item.metric;
@@ -132,32 +167,46 @@ function getCardTitle(item: CardItem, fieldKey: string, index: number): string {
 
   // Fallback titles
   switch (fieldKey) {
-    case "personas":
-      return `Persona ${index + 1}`;
+
+    case "kpis":
+      return `KPI ${index + 1}`;
+    case "keyFeatures":
+      return `Feature ${index + 1}`;
+    case "risks":
+      return `Risk ${index + 1}`;
     case "useCases":
       return `Use Case ${index + 1}`;
-    case "stakeholderMap":
-      return `Stakeholder ${index + 1}`;
-    case "successCriteria":
-      return `Criterion ${index + 1}`;
+    // case "personas":
+    //   return `Persona ${index + 1}`;
+    // case "stakeholderMap":
+    //   return `Stakeholder ${index + 1}`;
+    // case "successCriteria":
+    //   return `Criterion ${index + 1}`;
     default:
       return `Item ${index + 1}`;
   }
 }
 
 /**
- * Create empty item for a field type
+ * Creates an empty card item for a given field type.
+ * Used when adding a new card to the array.
  */
 function createEmptyItem(fieldKey: string): CardItem {
   switch (fieldKey) {
-    case "personas":
-      return { name: "", profile: "", needs: "", painPoints: "", successDefinition: "" };
+    case "kpis":
+      return { baseline: "", metric: "", target: "", measurementFrequency: "" };
+    case "keyFeatures":
+      return { description: "", features: "" };
+    case "risks":
+      return { risk: "", mitigation: "" };
     case "useCases":
-      return { name: "", actor: "", goal: "", scenario: "" };
-    case "stakeholderMap":
-      return { name: "", role: "", influence: "medium" as StakeholderLevel, interest: "medium" as StakeholderLevel };
-    case "successCriteria":
-      return { metric: "", target: "", measurement: "" };
+      return { useCase: "", actor: "", goal: "", scenario: "" };
+    // case "personas":
+    //   return { name: "", profile: "", needs: "", painPoints: "", successDefinition: "" };
+    // case "stakeholderMap":
+    //   return { name: "", role: "", influence: "medium" as StakeholderLevel, interest: "medium" as StakeholderLevel };
+    // case "successCriteria":
+    //   return { metric: "", target: "", measurement: "" };
     default:
       return {};
   }
@@ -182,22 +231,23 @@ function transformFieldsToCanvas(fields: any) {
     if (!Array.isArray(arr)) return arr ?? [];
     return arr.map((it) => parseJsonIfString(it));
   };
+//  ---- NFRs transformation logic ---- //
+//   const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
+//   const organizedNFRs: any = {};
+//   if (Array.isArray(nfrRaw)) {
+//     nfrRaw.forEach((item: any) => {
+//       const cat = item.category || "General";
+//       const req = item.requirement || "";
+//       if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
+//       organizedNFRs[cat].push(req);
+//     });
+//   }
 
-  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
-  const organizedNFRs: any = {};
-  if (Array.isArray(nfrRaw)) {
-    nfrRaw.forEach((item: any) => {
-      const cat = item.category || "General";
-      const req = item.requirement || "";
-      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
-      organizedNFRs[cat].push(req);
-    });
-  }
-
-  let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
-  let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
-    ? relevantFactsRaw.filter((v) => typeof v === 'string')
-    : [];
+//  ---- Relevant Facts transformation logic ---- //
+//   let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
+//   let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
+//     ? relevantFactsRaw.filter((v) => typeof v === 'string')
+//     : [];
 
   return {
     id: fields.canvas_id || fields.canvasId || "",
@@ -218,6 +268,8 @@ function transformFieldsToCanvas(fields: any) {
   };
 }
 
+// Maps the internal canvas object to the backend payload format.
+// Used to prepare data for saving to the backend.
 function mapCanvasToBackendPayload(canvas: any) {
   const nfrRaw = canvas.nonFunctionalRequirements?.value || {};
   const formattedNFRs = Object.entries(nfrRaw).flatMap(([category, requirements]) => {
@@ -259,9 +311,13 @@ export function CardArrayEditor({
   const [isActuallySaving, setIsActuallySaving] = React.useState(false);
 
   // Normalize value to array
+  // Support both direct array and field object with value property
   const items: CardItem[] = React.useMemo(() => {
     if (Array.isArray(value)) {
       return value as CardItem[];
+    }
+    if (value && typeof value === "object" && Array.isArray((value as any).value)) {
+      return (value as any).value as CardItem[];
     }
     return [];
   }, [value]);
@@ -325,19 +381,31 @@ export function CardArrayEditor({
   const handleAddItem = () => {
     const newItem = createEmptyItem(fieldKey);
     const newItems = [...items, newItem];
-    onChange(newItems);
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      onChange({ ...value, value: newItems });
+    } else {
+      onChange({ value: newItems, evidence: [], confidence: 0.5 });
+    }
     setExpandedCards(prev => new Set([...prev, newItems.length - 1]));
   };
 
   const handleUpdateItem = (index: number, updates: Partial<CardItem>) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], ...updates };
-    onChange(newItems);
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      onChange({ ...value, value: newItems });
+    } else {
+      onChange({ value: newItems, evidence: [], confidence: 0.5 });
+    }
   };
 
   const handleDeleteItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index);
-    onChange(newItems);
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      onChange({ ...value, value: newItems });
+    } else {
+      onChange({ value: newItems, evidence: [], confidence: 0.5 });
+    }
     setExpandedCards(prev => {
       const next = new Set<number>();
       prev.forEach(i => {
@@ -352,7 +420,11 @@ export function CardArrayEditor({
     const newItems = [...items];
     const [removed] = newItems.splice(fromIndex, 1);
     newItems.splice(toIndex, 0, removed);
-    onChange(newItems);
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      onChange({ ...value, value: newItems });
+    } else {
+      onChange({ value: newItems, evidence: [], confidence: 0.5 });
+    }
   };
 
   // Implement the save functionality from CanvasPreviewPage
@@ -425,7 +497,7 @@ export function CardArrayEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       {/* Cards */}
       <div className="space-y-3">
         {items.map((item, index) => {
@@ -557,7 +629,7 @@ export function CardArrayEditor({
       </Button>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2 pt-4 border-t">
+      <div className="flex items-center justify-end gap-2 pt-4 border-t bg-background sticky bottom-0 z-10">
         <Button variant="outline" onClick={onCancel} disabled={isActuallySaving || isSaving}>
           Cancel
         </Button>
@@ -579,6 +651,10 @@ interface CardFieldProps {
   itemIndex: number;
 }
 
+/**
+ * CardField: Renders a single field (input/select/textarea) inside a card.
+ * Used by CardArrayEditor to render each field in a card.
+ */
 function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React.ReactElement {
   const id = `${field.key}-${itemIndex}`;
   const stringValue = typeof value === "string" ? value : String(value ?? "");

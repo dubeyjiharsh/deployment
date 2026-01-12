@@ -23,7 +23,7 @@ import {
   type StructuredFieldType,
 } from "@/lib/validators/structured-field-schemas";
 import { CategoryListEditor } from "./category-list-editor";
-import { TimelineEditor } from "./timeline-editor";
+// import { TimelineEditor } from "./timeline-editor";
 import { CardArrayEditor } from "./card-array-editor";
 import { GovernanceEditor } from "./governance-editor";
 // import { BudgetEditor } from "./budget-editor";
@@ -148,8 +148,8 @@ function renderEditor(
     case "category-list":
       return <CategoryListEditor {...props} />;
 
-    case "timeline":
-      return <TimelineEditor {...props} />;
+    // case "timeline":
+    //   return <TimelineEditor {...props} />;
 
     case "card-array":
       return <CardArrayEditor {...props} fieldKey={props.fieldKey as Exclude<typeof props.fieldKey, string>} />;
@@ -215,7 +215,7 @@ function detectEditorType(value: unknown): StructuredFieldType {
 
 // Re-export sub-components for direct use if needed
 export { CategoryListEditor } from "./category-list-editor";
-export { TimelineEditor } from "./timeline-editor";
+// export { TimelineEditor } from "./timeline-editor";
 export { CardArrayEditor } from "./card-array-editor";
 export { GovernanceEditor } from "./governance-editor";
 // export { BudgetEditor } from "./budget-editor";

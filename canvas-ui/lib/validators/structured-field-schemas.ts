@@ -11,7 +11,86 @@
  * in services/llm/prompts.ts FIELD_STRUCTURE_INSTRUCTIONS
  */
 
+import { use } from "react";
 import { z } from "zod";
+
+
+// ============================================================================
+// KPIS
+// Structure: Object with category keys, each containing an array of requirement strings
+// ============================================================================
+
+export const kpisCategoryKeys = [
+  "baseline",
+  "metric",
+  "target",
+  "measurementFrequency",
+] as const;
+
+export type KPISCategoryKey = typeof kpisCategoryKeys[number];
+
+export const kpisSchema = z.object({
+  baseline: z.array(z.string()).default([]),
+  metric: z.array(z.string()).default([]),
+  target: z.array(z.string()).default([]),
+  measurementFrequency: z.array(z.string()).default([]),
+});
+
+export type KPISValue = z.infer<typeof kpisSchema>;
+
+export const KPIS_CATEGORY_LABELS: Record<KPISCategoryKey, string> = {
+  baseline: "Baseline",
+  metric: "Metric",
+  target: "Target",
+  measurementFrequency: "Measurement Frequency",
+};
+
+// ============================================================================
+// KEY FEATURES
+// Structure: Object with category keys, each containing an array of requirement strings
+// ============================================================================
+
+export const keyFeaturesCategoryKeys = [
+  "description",
+  "features",
+] as const;
+
+export type KeyFeaturesCategoryKey = typeof keyFeaturesCategoryKeys[number];
+
+export const keyFeaturesSchema = z.object({
+  description: z.array(z.string()).default([]),
+  features: z.array(z.string()).default([]),
+});
+
+export type KeyFeaturesValue = z.infer<typeof keyFeaturesSchema>;
+export const KEY_FEATURES_CATEGORY_LABELS: Record<KeyFeaturesCategoryKey, string> = {
+  description: "Description",
+  features: "Feature",
+};
+
+// ============================================================================
+// RISKS
+// Structure: Object with category keys, each containing an array of requirement strings
+// ============================================================================
+
+export const risksCategoryKeys = [
+  "mitigation",
+  "risk",
+] as const;
+
+export type RISKSCategoryKey = typeof risksCategoryKeys[number];
+
+export const risksSchema = z.object({
+  mitigation: z.array(z.string()).default([]),
+  risk: z.array(z.string()).default([]),
+});
+
+export type RISKSValue = z.infer<typeof risksSchema>;
+
+export const RISKS_CATEGORY_LABELS: Record<RISKSCategoryKey, string> = {
+  mitigation: "Mitigation",
+  risk: "Risk",
+};
 
 // ============================================================================
 // NON-FUNCTIONAL REQUIREMENTS (NFR)
@@ -46,70 +125,6 @@ export const NFR_CATEGORY_LABELS: Record<NFRCategoryKey, string> = {
   dataQualityIntegration: "Data Quality & Integration",
 };
 
-// ============================================================================
-// SCOPE DEFINITION
-// Structure: Object with inScope and outOfScope arrays
-// ============================================================================
-
-export const scopeDefinitionSchema = z.object({
-  inScope: z.array(z.string()).default([]),
-  outOfScope: z.array(z.string()).default([]),
-});
-
-export type ScopeDefinitionValue = z.infer<typeof scopeDefinitionSchema>;
-
-export const SCOPE_CATEGORY_LABELS = {
-  inScope: "In Scope",
-  outOfScope: "Out of Scope",
-} as const;
-
-// ============================================================================
-// TIMELINES
-// Structure: Object with start/end dates and milestones array
-// ============================================================================
-
-export const milestoneSchema = z.object({
-  name: z.string().min(1, "Milestone name is required"),
-  date: z.string().min(1, "Milestone date is required"),
-  description: z.string().optional(),
-});
-
-export type MilestoneValue = z.infer<typeof milestoneSchema>;
-
-export const timelinesSchema = z.object({
-  start: z.string().nullable().default(null),
-  end: z.string().nullable().default(null),
-  milestones: z.array(milestoneSchema).default([]),
-});
-
-export type TimelinesValue = z.infer<typeof timelinesSchema>;
-
-// ============================================================================
-// PERSONAS
-// Structure: Array of persona objects
-// ============================================================================
-
-export const personaSchema = z.object({
-  name: z.string().min(1, "Persona name is required"),
-  profile: z.string().default(""),
-  needs: z.string().default(""),
-  painPoints: z.string().default(""),
-  successDefinition: z.string().default(""),
-});
-
-export type PersonaValue = z.infer<typeof personaSchema>;
-
-export const personasSchema = z.array(personaSchema);
-
-export type PersonasValue = z.infer<typeof personasSchema>;
-
-export const PERSONA_FIELD_LABELS = {
-  name: "Name",
-  profile: "Profile",
-  needs: "Needs",
-  painPoints: "Pain Points",
-  successDefinition: "Success Definition",
-} as const;
 
 // ============================================================================
 // USE CASES
@@ -117,111 +132,21 @@ export const PERSONA_FIELD_LABELS = {
 // ============================================================================
 
 export const useCaseSchema = z.object({
-  name: z.string().min(1, "Use case name is required"),
   actor: z.string().default(""),
   goal: z.string().default(""),
   scenario: z.string().default(""),
+  useCases: z.string().default(""),
 });
 
 export type UseCaseValue = z.infer<typeof useCaseSchema>;
 
 export const useCasesSchema = z.array(useCaseSchema);
 
-export type UseCasesValue = z.infer<typeof useCasesSchema>;
-
 export const USE_CASE_FIELD_LABELS = {
-  name: "Name",
   actor: "Actor",
   goal: "Goal",
   scenario: "Scenario",
-} as const;
-
-// ============================================================================
-// STAKEHOLDER MAP
-// Structure: Array of stakeholder objects with enum values for influence/interest
-// ============================================================================
-
-export const stakeholderLevels = ["low", "medium", "high"] as const;
-export type StakeholderLevel = typeof stakeholderLevels[number];
-
-export const raciRoles = ["responsible", "accountable", "consulted", "informed"] as const;
-export type RACIRole = typeof raciRoles[number];
-
-export const stakeholderSchema = z.object({
-  name: z.string().min(1, "Stakeholder name is required"),
-  role: z.string().default(""),
-  influence: z.enum(stakeholderLevels).default("medium"),
-  interest: z.enum(stakeholderLevels).default("medium"),
-  raciRole: z.enum(raciRoles).optional(),
-});
-
-export type StakeholderValue = z.infer<typeof stakeholderSchema>;
-
-export const stakeholderMapSchema = z.array(stakeholderSchema);
-
-export type StakeholderMapValue = z.infer<typeof stakeholderMapSchema>;
-
-export const STAKEHOLDER_LEVEL_LABELS: Record<StakeholderLevel, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-};
-
-export const RACI_ROLE_LABELS: Record<RACIRole, string> = {
-  responsible: "Responsible",
-  accountable: "Accountable",
-  consulted: "Consulted",
-  informed: "Informed",
-};
-
-// ============================================================================
-// SUCCESS CRITERIA
-// Structure: Array of criteria objects with metric, target, measurement
-// ============================================================================
-
-export const successCriterionSchema = z.object({
-  metric: z.string().min(1, "Metric is required"),
-  target: z.string().default(""),
-  measurement: z.string().default(""),
-});
-
-export type SuccessCriterionValue = z.infer<typeof successCriterionSchema>;
-
-export const successCriteriaSchema = z.array(successCriterionSchema);
-
-export type SuccessCriteriaValue = z.infer<typeof successCriteriaSchema>;
-
-export const SUCCESS_CRITERIA_FIELD_LABELS = {
-  metric: "Metric",
-  target: "Target",
-  measurement: "Measurement",
-} as const;
-
-// ============================================================================
-// BUDGET / RESOURCES
-// Structure: Object with totalEstimate, breakdown array, and optional FTE
-// ============================================================================
-
-export const budgetBreakdownSchema = z.object({
-  category: z.string().min(1, "Category is required"),
-  amount: z.string().default(""),
-  notes: z.string().optional(),
-});
-
-export type BudgetBreakdownValue = z.infer<typeof budgetBreakdownSchema>;
-
-export const budgetResourcesSchema = z.object({
-  totalEstimate: z.string().default(""),
-  breakdown: z.array(budgetBreakdownSchema).default([]),
-  fteRequirements: z.string().optional(),
-});
-
-export type BudgetResourcesValue = z.infer<typeof budgetResourcesSchema>;
-
-export const BUDGET_BREAKDOWN_FIELD_LABELS = {
-  category: "Category",
-  amount: "Amount",
-  notes: "Notes",
+  useCases: "Use Cases",
 } as const;
 
 // ============================================================================
@@ -230,9 +155,9 @@ export const BUDGET_BREAKDOWN_FIELD_LABELS = {
 // ============================================================================
 
 export const governancePersonSchema = z.object({
-  role: z.string().min(1, "Role is required"),
-  responsibility: z.string().default(""),
-  authority: z.string().default(""),
+  role: z.string(),
+  responsibility: z.string(),
+  authority: z.string(),
 });
 
 export type GovernancePersonValue = z.infer<typeof governancePersonSchema>;
@@ -240,6 +165,7 @@ export type GovernancePersonValue = z.infer<typeof governancePersonSchema>;
 export const governanceSchema = z.object({
   approvers: z.array(governancePersonSchema).default([]),
   reviewers: z.array(governancePersonSchema).default([]),
+  requirementLeads: z.array(governancePersonSchema).default([]),
 });
 
 export type GovernanceValue = z.infer<typeof governanceSchema>;
@@ -251,76 +177,208 @@ export const GOVERNANCE_PERSON_FIELD_LABELS = {
 } as const;
 
 export const GOVERNANCE_CATEGORY_LABELS = {
-  approvers: "Approvers",
+  approvers: "Sign-off Approvers",
   reviewers: "Reviewers",
+  requirementLeads: "Requirement Leads",
 } as const;
+
+// ============================================================================
+// SCOPE DEFINITION
+// Structure: Object with inScope and outOfScope arrays
+// ============================================================================
+
+// export const scopeDefinitionSchema = z.object({
+//   inScope: z.array(z.string()).default([]),
+//   outOfScope: z.array(z.string()).default([]),
+// });
+
+// export type ScopeDefinitionValue = z.infer<typeof scopeDefinitionSchema>;
+
+// export const SCOPE_CATEGORY_LABELS = {
+//   inScope: "In Scope",
+//   outOfScope: "Out of Scope",
+// } as const;
+
+// ============================================================================
+// TIMELINES
+// Structure: Object with start/end dates and milestones array
+// ============================================================================
+
+// export const milestoneSchema = z.object({
+//   name: z.string().min(1, "Milestone name is required"),
+//   date: z.string().min(1, "Milestone date is required"),
+//   description: z.string().optional(),
+// });
+
+// export type MilestoneValue = z.infer<typeof milestoneSchema>;
+
+// export const timelinesSchema = z.object({
+//   start: z.string().nullable().default(null),
+//   end: z.string().nullable().default(null),
+//   milestones: z.array(milestoneSchema).default([]),
+// });
+
+// export type TimelinesValue = z.infer<typeof timelinesSchema>;
+
+// ============================================================================
+// PERSONAS
+// Structure: Array of persona objects
+// ============================================================================
+
+// export const personaSchema = z.object({
+//   name: z.string().min(1, "Persona name is required"),
+//   profile: z.string().default(""),
+//   needs: z.string().default(""),
+//   painPoints: z.string().default(""),
+//   successDefinition: z.string().default(""),
+// });
+
+// export type PersonaValue = z.infer<typeof personaSchema>;
+
+// export const personasSchema = z.array(personaSchema);
+
+// export type PersonasValue = z.infer<typeof personasSchema>;
+
+// export const PERSONA_FIELD_LABELS = {
+//   name: "Name",
+//   profile: "Profile",
+//   needs: "Needs",
+//   painPoints: "Pain Points",
+//   successDefinition: "Success Definition",
+// } as const;
+
+
+
+// ============================================================================
+// STAKEHOLDER MAP
+// Structure: Array of stakeholder objects with enum values for influence/interest
+// ============================================================================
+
+// export const stakeholderLevels = ["low", "medium", "high"] as const;
+// export type StakeholderLevel = typeof stakeholderLevels[number];
+
+// export const raciRoles = ["responsible", "accountable", "consulted", "informed"] as const;
+// export type RACIRole = typeof raciRoles[number];
+
+// export const stakeholderSchema = z.object({
+//   name: z.string().min(1, "Stakeholder name is required"),
+//   role: z.string().default(""),
+//   influence: z.enum(stakeholderLevels).default("medium"),
+//   interest: z.enum(stakeholderLevels).default("medium"),
+//   raciRole: z.enum(raciRoles).optional(),
+// });
+
+// export type StakeholderValue = z.infer<typeof stakeholderSchema>;
+
+// export const stakeholderMapSchema = z.array(stakeholderSchema);
+
+// export type StakeholderMapValue = z.infer<typeof stakeholderMapSchema>;
+
+// export const STAKEHOLDER_LEVEL_LABELS: Record<StakeholderLevel, string> = {
+//   low: "Low",
+//   medium: "Medium",
+//   high: "High",
+// };
+
+// export const RACI_ROLE_LABELS: Record<RACIRole, string> = {
+//   responsible: "Responsible",
+//   accountable: "Accountable",
+//   consulted: "Consulted",
+//   informed: "Informed",
+// };
+
+// ============================================================================
+// SUCCESS CRITERIA
+// Structure: Array of criteria objects with metric, target, measurement
+// ============================================================================
+
+// export const successCriterionSchema = z.object({
+//   metric: z.string().min(1, "Metric is required"),
+//   target: z.string().default(""),
+//   measurement: z.string().default(""),
+// });
+
+// export type SuccessCriterionValue = z.infer<typeof successCriterionSchema>;
+
+// export const successCriteriaSchema = z.array(successCriterionSchema);
+
+// export type SuccessCriteriaValue = z.infer<typeof successCriteriaSchema>;
+
+// export const SUCCESS_CRITERIA_FIELD_LABELS = {
+//   metric: "Metric",
+//   target: "Target",
+//   measurement: "Measurement",
+// } as const;
+
+// ============================================================================
+// BUDGET / RESOURCES
+// Structure: Object with totalEstimate, breakdown array, and optional FTE
+// ============================================================================
+
+// export const budgetBreakdownSchema = z.object({
+//   category: z.string().min(1, "Category is required"),
+//   amount: z.string().default(""),
+//   notes: z.string().optional(),
+// });
+
+// export type BudgetBreakdownValue = z.infer<typeof budgetBreakdownSchema>;
+
+// export const budgetResourcesSchema = z.object({
+//   totalEstimate: z.string().default(""),
+//   breakdown: z.array(budgetBreakdownSchema).default([]),
+//   fteRequirements: z.string().optional(),
+// });
+
+// export type BudgetResourcesValue = z.infer<typeof budgetResourcesSchema>;
+
+// export const BUDGET_BREAKDOWN_FIELD_LABELS = {
+//   category: "Category",
+//   amount: "Amount",
+//   notes: "Notes",
+// } as const;
+
 
 // ============================================================================
 // OKRs (Objectives and Key Results)
 // Structure: Array of objective/key-result objects with hierarchy
 // ============================================================================
 
-export const okrSchema = z.discriminatedUnion("type", [
-  z.object({
-    id: z.string(),
-    type: z.literal("objective"),
-    title: z.string().min(1, "Title is required"),
-    description: z.string().default(""),
-  }),
-  z.object({
-    id: z.string(),
-    type: z.literal("key-result"),
-    title: z.string().min(1, "Title is required"),
-    description: z.string().default(""),
-    parentId: z.string().min(1, "Parent objective is required"),
-    targetValue: z.string().default(""),
-    currentValue: z.string().default(""),
-  }),
-]);
+// export const okrSchema = z.discriminatedUnion("type", [
+//   z.object({
+//     id: z.string(),
+//     type: z.literal("objective"),
+//     title: z.string().min(1, "Title is required"),
+//     description: z.string().default(""),
+//   }),
+//   z.object({
+//     id: z.string(),
+//     type: z.literal("key-result"),
+//     title: z.string().min(1, "Title is required"),
+//     description: z.string().default(""),
+//     parentId: z.string().min(1, "Parent objective is required"),
+//     targetValue: z.string().default(""),
+//     currentValue: z.string().default(""),
+//   }),
+// ]);
 
-export type OKRValue = z.infer<typeof okrSchema>;
+// export type OKRValue = z.infer<typeof okrSchema>;
 
-export const okrsSchema = z.array(okrSchema);
+// export const okrsSchema = z.array(okrSchema);
 
-export type OKRsValue = z.infer<typeof okrsSchema>;
+// export type OKRsValue = z.infer<typeof okrsSchema>;
 
-// ============================================================================
-// RISKS
-// Structure: Array of risk objects or simple strings (flexible)
-// ============================================================================
-
-export const riskSchema = z.object({
-  risk: z.string().min(1, "Risk description is required"),
-  impact: z.string().optional(),
-  mitigation: z.string().optional(),
-  likelihood: z.enum(["low", "medium", "high"]).optional(),
-});
-
-export type RiskValue = z.infer<typeof riskSchema>;
-
-// Risks can be either simple strings or structured objects
-export const risksSchema = z.union([
-  z.array(z.string()),
-  z.array(riskSchema),
-]);
-
-export type RisksValue = z.infer<typeof risksSchema>;
-
-// ============================================================================
-// FIELD TYPE DETECTION
-// Maps fieldKey to the appropriate schema and editor type
-// ============================================================================
 
 export type StructuredFieldType =
   | "category-list"      // NFR, Scope (object with category arrays)
   | "timeline"           // Timelines (dates + milestones)
   | "card-array"         // Personas, Use Cases, Stakeholders, etc.
   | "governance"         // Governance (approvers/reviewers)
-  | "budget"             // Budget (total + breakdown)
-  | "okr"               // OKRs (hierarchical objectives + key results)
+  // | "budget"             // Budget (total + breakdown)
+  // | "okr"               // OKRs (hierarchical objectives + key results)
   | "simple-list"        // Simple string arrays
   | "text"              // Plain text (default)
   | "unknown-object";   // Unknown object structure - show read-only or JSON
+
 
 export interface StructuredFieldConfig {
   type: StructuredFieldType;
@@ -333,7 +391,29 @@ export interface StructuredFieldConfig {
  */
 export function getStructuredFieldConfig(fieldKey: string): StructuredFieldConfig | null {
   switch (fieldKey) {
-    case "nonFunctionalRequirements":
+
+    case "KPIs":
+      return {
+        type: "card-array",
+        schema: kpisSchema,
+        emptyValue: { baseline: [], metric: [], target: [], measurementFrequency: []},
+      };
+
+    case "keyFeatures":
+      return {
+        type: "card-array",
+        schema: keyFeaturesSchema,
+        emptyValue: { description: [], features: [] },
+      };
+
+    case "risks":
+      return {
+        type: "card-array",
+        schema: risksSchema,
+        emptyValue: { mitigation: [], risk: []},
+      };
+
+      case "nonFunctionalRequirements":
       return {
         type: "category-list",
         schema: nfrSchema,
@@ -346,68 +426,48 @@ export function getStructuredFieldConfig(fieldKey: string): StructuredFieldConfi
         },
       };
 
-    case "scopeDefinition":
-      return {
-        type: "category-list",
-        schema: scopeDefinitionSchema,
-        emptyValue: { inScope: [], outOfScope: [] },
-      };
-
-    case "timelines":
-      return {
-        type: "timeline",
-        schema: timelinesSchema,
-        emptyValue: { start: null, end: null, milestones: [] },
-      };
-
-    case "personas":
-      return {
-        type: "card-array",
-        schema: personasSchema,
-        emptyValue: [],
-      };
-
     case "useCases":
       return {
         type: "card-array",
         schema: useCasesSchema,
-        emptyValue: [],
-      };
-
-    case "stakeholderMap":
-      return {
-        type: "card-array",
-        schema: stakeholderMapSchema,
-        emptyValue: [],
-      };
-
-    case "successCriteria":
-      return {
-        type: "card-array",
-        schema: successCriteriaSchema,
-        emptyValue: [],
-      };
-
-    case "budgetResources":
-      return {
-        type: "budget",
-        schema: budgetResourcesSchema,
-        emptyValue: { totalEstimate: "", breakdown: [], fteRequirements: "" },
+        emptyValue: { actor: [], goal: [], scenario: [], useCases: []},
       };
 
     case "governance":
       return {
         type: "governance",
         schema: governanceSchema,
-        emptyValue: { approvers: [], reviewers: [] },
+        emptyValue: { approvers: [], reviewers: [], requirementLeads: [] },
       };
 
-    case "okrs":
-      return {
-        type: "okr",
-        schema: okrsSchema,
-        emptyValue: [],
-      };
+
+    // case "stakeholderMap":
+    //   return {
+    //     type: "card-array",
+    //     schema: stakeholderMapSchema,
+    //     emptyValue: [],
+    //   };
+
+    // case "successCriteria":
+    //   return {
+    //     type: "card-array",
+    //     schema: successCriteriaSchema,
+    //     emptyValue: [],
+    //   };
+
+    // case "budgetResources":
+    //   return {
+    //     type: "budget",
+    //     schema: budgetResourcesSchema,
+    //     emptyValue: { totalEstimate: "", breakdown: [], fteRequirements: "" },
+    //   };
+
+    // case "okrs":
+    //   return {
+    //     type: "okr",
+    //     schema: okrsSchema,
+    //     emptyValue: [],
+    //   };
 
     default:
       return null;

@@ -239,26 +239,40 @@ export function CanvasPreviewPage(): React.ReactElement {
       {ReactDOM.createPortal(
         <div className="flex items-center gap-3">
           {/* New Edit Canvas Button Added Below */}
-          <Button variant="outline" size="sm" onClick={handleEditCanvas}>
-            <Edit3 className="mr-2 h-4 w-4" />
-            AI Refine
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportWord}>Download as Word</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPdf}>Download as PDF</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditCanvas}
+              className="hover:bg-transparent focus:bg-transparent"
+            >
+              <Edit3 className="mr-2 h-4 w-4" />
+              AI Refine
+            </Button>
+            {/* <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSave}
+              className="hover:bg-transparent focus:bg-transparent"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save
+            </Button> */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hover:bg-transparent focus:bg-transparent"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportWord}>Download as Word</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPdf}>Download as PDF</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>,
         document.getElementById("page-actions")!
       )}
