@@ -291,29 +291,22 @@ export function CreateCanvasPage(): React.ReactElement {
               </table>
             </div>
           )}
-          <div className="flex items-center w-full gap-2">
-            <div className="flex flex-grow items-center relative">
-              <div className="relative w-full">
-                <Textarea
-                  value={idea}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 1000) setIdea(e.target.value);
-                  }}
-                  maxLength={1000}
-                  placeholder="Type your message..."
-                  className="bg-white h-20 w-full"
-                  disabled={isLoading}
-                  minLength={10}
-                  aria-invalid={!!ideaError}
-                />
-                {ideaError && (
-                  <div className="text-red-500 text-xs mt-1 absolute left-0 top-full">{ideaError}</div>
-                )}
-                <div className="text-xs text-gray-400 select-none mt-1">
-                  {idea.length}/1000
-                </div>
-              </div>
-              <div className="flex items-center space-x-2 absolute right-5">
+          <div className="flex items-start w-full gap-2">
+            <div className="flex-1 min-w-0 relative">
+              <Textarea
+                value={idea}
+                onChange={(e) => {
+                  if (e.target.value.length <= 1000) setIdea(e.target.value);
+                }}
+                maxLength={1000}
+                placeholder="Type your message..."
+                className="bg-white h-20 w-full pr-36"
+                disabled={isLoading}
+                minLength={10}
+                aria-invalid={!!ideaError}
+              />
+              {/* All three buttons in a row, right-aligned */}
+              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
@@ -335,21 +328,25 @@ export function CreateCanvasPage(): React.ReactElement {
                     "➤"
                   )}
                 </button>
-                {ideaError && (
-                  <div className="text-red-500 text-xs mt-2 w-full text-center">{ideaError}</div>
-                )}
+                <input
+                  id="file-input"
+                  type="file"
+                  style={{ display: "none" }}
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  multiple={true}
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                />
               </div>
-              <input
-                id="file-input"
-                type="file"
-                style={{ display: "none" }}
-                accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                multiple={true}
-                onChange={(e) => handleFileUpload(e.target.files)}
-              />
+              {ideaError && (
+                <div className="text-red-500 text-xs mt-1">{ideaError}</div>
+              )}
+              <div className="text-xs text-gray-400 select-none mt-1">
+                {idea.length}/1000
+              </div>
             </div>
+            {/* Preview button outside the input box */}
             <button
-              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
               onClick={handlePreview}
               disabled={chat.length === 0}
               aria-disabled={chat.length === 0}
