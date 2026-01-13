@@ -1,5 +1,5 @@
 # Use an official Node.js runtime as a parent image
-FROM node:20.19.6-bookworm-slim
+FROM node:20.19.6-bookworm-slim@sha256:4f415de854687bf6bee2f05878f0ed43e74c6f9f6d6bb886f3dfbbc4ce1ac5a6
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \ 
  && sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources || true
