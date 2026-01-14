@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Routes, Route } from "react-router-dom";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -7,42 +8,140 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { useHashPath } from "@/lib/router";
 
-import LoginPage from "@/src/pages/LoginPage";
 import { DashboardPage } from "@/src/pages/DashboardPage";
 import { CreateCanvasPage } from "@/src/pages/CreateCanvasPage";
 import { CanvasPage } from "@/src/pages/CanvasPage";
 import { UserManagementPage } from "@/src/pages/UserManagementPage";
 import { NotFoundPage } from "@/src/pages/NotFoundPage";
 import { CanvasPreviewPage } from "@/src/pages/CanvasPreviewPage";
+import { isAuthenticated, doLogin } from "@/src/lib/auth";
+import LogoutPage from "@/src/pages/LogoutPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export function App(): React.ReactElement {
   const path = useHashPath();
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
-  // Check if user is authenticated
-  const isAuthenticated = !!sessionStorage.getItem('userId');
+  // Clean up any malformed hashes on mount
+  React.useEffect(() => {
+    const hash = window.location.hash;
 
-  let content: React.ReactNode = <NotFoundPage />;
-  
-  // Login page - accessible without authentication
-  if (path === "/login") {
-    content = <LoginPage />;
+    // Fix malformed hashes
+    if (hash.includes('%2F')) {
+      console.log("Cleaning malformed hash:", hash);
+      
+      // Extract the intended path
+      let targetPath = '/';
+      if (hash.includes('logout')) {
+        targetPath = '/logout';
+      } else if (hash.includes('dashboard')) {
+        targetPath = '/';
+      }
+      
+      window.history.replaceState(null, '', `${window.location.origin}/#${targetPath}`);
+    }
+    
+    // Fix double slashes
+    if (hash.startsWith('#//')) {
+      console.log("Fixing double slashes in hash:", hash);
+      window.history.replaceState(null, '', hash.replace('#//', '#/'));
+    }
+  }, []);
+
+  // Decode and clean the path
+  let cleanPath = path;
+  try {
+    cleanPath = decodeURIComponent(path);
+  } catch (e) {
+    console.error("Error decoding path:", e);
+    cleanPath = '/';
   }
-  // If not authenticated and not on login page, show login
-  else if (!isAuthenticated) {
-    content = <LoginPage />;
+
+  // Additional cleanup for edge cases
+  if (cleanPath.includes('//') || cleanPath.includes('=') || cleanPath.includes('%')) {
+    console.log("Detected problematic path:", cleanPath);
+    
+    if (cleanPath.includes('logout')) {
+      cleanPath = '/logout';
+    } else if (cleanPath.includes('dashboard')) {
+      cleanPath = '/';
+    } else {
+      cleanPath = '/';
+    }
   }
-  // Authenticated routes
-  else if (path === "/" || path === "") {
-    content = <DashboardPage />;
-  } else if (path === "/canvas/create") {
-    content = <CreateCanvasPage />;
-  } else if (path === "/canvas-preview" || path.startsWith("/canvas-preview/")) {
-    content = <CanvasPreviewPage />;
-  } else if (path.startsWith("/canvas/")) {
-    content = <CanvasPage />;
-  } else if (path === "/admin") {
-    content = <UserManagementPage />;
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsInitialized(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Wait for initialization before checking auth
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg animate-pulse">Loading...</p>
+        </div>
+      </div>
+    );
   }
+
+  const authStatus = isAuthenticated();
+
+  console.log("Auth status:", authStatus, "Original Path:", path, "Clean Path:", cleanPath);
+
+  // Check if we are currently in the middle of a login redirect
+  const isAuthCallback = window.location.hash.includes("state=") || 
+                        window.location.search.includes("state=") ||
+                        window.location.hash.includes("code=");
+
+  console.log("Is auth callback:", isAuthCallback);
+
+  // LOGOUT PAGE - Always allow access, authenticated or not
+  if (cleanPath === "/logout") {
+    return (
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        forcedTheme="light"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        <SidebarProvider
+          defaultOpen={false}
+          style={{ "--sidebar-width": "18rem", "--header-height": "3rem" } as React.CSSProperties}
+        >
+          <AppSidebar variant="sidebar" />
+          <SidebarInset>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col">
+              <div className="@container/main flex flex-1 flex-col">
+                <LogoutPage />
+              </div>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+        <Toaster />
+      </ThemeProvider>
+    );
+  }
+
+  // If not authenticated and not in the middle of a callback, redirect to login
+  if (!authStatus && !isAuthCallback) {
+    console.log("Not authenticated, redirecting to login...");
+    doLogin();
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg animate-pulse">Connecting to Keycloak...</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Routing to:", cleanPath);
 
   return (
     <ThemeProvider
@@ -54,18 +153,25 @@ export function App(): React.ReactElement {
     >
       <SidebarProvider
         defaultOpen={false}
-        style={
-          {
-            "--sidebar-width": "18rem",
-            "--header-height": "3rem",
-          } as React.CSSProperties
-        }
+        style={{ "--sidebar-width": "18rem", "--header-height": "3rem" } as React.CSSProperties}
       >
         <AppSidebar variant="sidebar" />
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col">{content}</div>
+            <div className="@container/main flex flex-1 flex-col">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/logout" element={<LogoutPage />} />
+                  <Route path="/canvas/create" element={<CreateCanvasPage />} />
+                  <Route path="/canvas-preview/:id" element={<CanvasPreviewPage />} />
+                  <Route path="/canvas/:id" element={<CanvasPage />} />
+                  <Route path="/admin" element={<UserManagementPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </ErrorBoundary>
+            </div>
           </div>
         </SidebarInset>
       </SidebarProvider>

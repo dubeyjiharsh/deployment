@@ -4,7 +4,7 @@
  * SimpleListEditor
  *
  * Editor for simple string arrays (lists).
- * Used for: Key Features, Dependencies, Assumptions, etc.
+ * Used for: Objectives, Success criteria, Assumptions, Relevant Facts
  *
  * UI: Simple list of text inputs with add/remove/reorder
  */
@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { StructuredFieldEditorProps } from "./index";
+// Added//
+import { API_ENDPOINTS } from '@/config/api';
+import { toast } from "sonner";
 
 /**
  * Normalizes value to string array
@@ -40,13 +43,101 @@ function normalizeList(value: unknown): string[] {
   return [];
 }
 
+
+// Helper functions from CanvasPreviewPage
+function parseJsonIfString(v: unknown) {
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v);
+    } catch (e) {
+      return v;
+    }
+  }
+  return v;
+}
+
+function transformFieldsToCanvas(fields: any) {
+  const makeField = (value: any) => ({ value: value ?? null, evidence: [], confidence: 0.5 });
+
+  const parseArray = (arr: any) => {
+    if (!Array.isArray(arr)) return arr ?? [];
+    return arr.map((it) => parseJsonIfString(it));
+  };
+
+  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
+  const organizedNFRs: any = {};
+  if (Array.isArray(nfrRaw)) {
+    nfrRaw.forEach((item: any) => {
+      const cat = item.category || "General";
+      const req = item.requirement || "";
+      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
+      organizedNFRs[cat].push(req);
+    });
+  }
+
+  let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
+  let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
+    ? relevantFactsRaw.filter((v) => typeof v === 'string')
+    : [];
+
+  return {
+    id: fields.canvas_id || fields.canvasId || "",
+    title: makeField(fields.Title || fields.title || "Untitled Canvas"),
+    problemStatement: makeField(fields.problem_statement || fields.problemStatement || fields["Problem Statement"]),
+    objectives: makeField(parseArray(fields.Objectives || fields.objectives)),
+    kpis: makeField(parseArray(fields.KPIs || fields.kpis)),
+    successCriteria: makeField(parseArray(fields["Success Criteria"] || fields.success_criteria)),
+    keyFeatures: makeField(parseArray(fields["Key Features"] || fields.key_features)),
+    risks: makeField(parseArray(fields.Risks || fields.risks)),
+    assumptions: makeField(parseArray(fields.Assumptions || fields.assumptions)),
+    nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
+    useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
+    governance: makeField(fields.Governance || fields.governance || {}),
+    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevantFacts)),
+    createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
+    updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
+  };
+}
+
+function mapCanvasToBackendPayload(canvas: any) {
+  const nfrRaw = canvas.nonFunctionalRequirements?.value || {};
+  const formattedNFRs = Object.entries(nfrRaw).flatMap(([category, requirements]) => {
+    if (Array.isArray(requirements)) {
+      return requirements.map(req => ({
+        category: category,
+        requirement: typeof req === 'string' ? req : JSON.stringify(req)
+      }));
+    }
+    return [];
+  });
+
+  return {
+    "Title": canvas.title?.value || "",
+    "Problem Statement": canvas.problemStatement?.value || "",
+    "Objectives": Array.isArray(canvas.objectives?.value) ? canvas.objectives.value : [],
+    "KPIs": Array.isArray(canvas.kpis?.value) ? canvas.kpis.value : [],
+    "Success Criteria": Array.isArray(canvas.successCriteria?.value) ? canvas.successCriteria.value : [],
+    "Key Features": Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [],
+    "Risks": Array.isArray(canvas.risks?.value) ? canvas.risks.value : [],
+    "Assumptions": Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [],
+    "Non Functional Requirements": Array.isArray(canvas.nonFunctionalRequirements?.value) ? canvas.nonFunctionalRequirements.value : [],
+    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null
+      ? canvas.governance.value
+      : {},
+    "Relevant Facts": Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [],
+    "Use Cases": Array.isArray(canvas.useCases?.value) ? canvas.useCases.value : [],
+  };
+}
+
 export function SimpleListEditor({
   value,
   onChange,
   onSave,
   onCancel,
   isSaving,
-}: StructuredFieldEditorProps): React.ReactElement {
+  fieldKey, // Added fieldKey as a prop
+}: StructuredFieldEditorProps & { fieldKey: keyof ReturnType<typeof transformFieldsToCanvas> }): React.ReactElement {
+  const [isActuallySaving, setIsActuallySaving] = React.useState(false);
   const items = React.useMemo(() => normalizeList(value), [value]);
   const [newItemText, setNewItemText] = React.useState("");
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
@@ -82,6 +173,74 @@ export function SimpleListEditor({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleAddItem();
+    }
+  };
+
+  const handleSaveChanges = async (): Promise<void> => {
+    setIsActuallySaving(true);
+
+    try {
+      // Get canvas ID from sessionStorage
+      const canvasId = sessionStorage.getItem("canvasId");
+      if (!canvasId) {
+        toast.error("No canvas ID found");
+        return;
+      }
+
+      // Get the full canvas data from sessionStorage
+      const canvasJsonStr = sessionStorage.getItem("canvasJson");
+      if (!canvasJsonStr) {
+        toast.error("No canvas data found");
+        return;
+      }
+
+      const canvasJson = JSON.parse(canvasJsonStr);
+      const canvas = transformFieldsToCanvas(canvasJson);
+
+      // Update the specific field with current value
+      if (canvas[fieldKey]) {
+        canvas[fieldKey].value = value;
+      }
+
+      // Convert to backend payload format
+      const payload = mapCanvasToBackendPayload(canvas);
+
+      // Make the API call
+      const url = API_ENDPOINTS.canvasSave(canvasId);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Update sessionStorage with new data
+      sessionStorage.setItem("canvasJson", JSON.stringify(data.fields || data));
+
+      toast.success("Canvas saved successfully!");
+
+      // Call the original onSave callback if provided
+      if (onSave) {
+        onSave();
+      }
+
+      // Reload the page after a short delay to show the toast
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      toast.error("Failed to save canvas");
+      console.error("Failed to save canvas:", error);
+    } finally {
+      setIsActuallySaving(false);
     }
   };
 
@@ -138,12 +297,16 @@ export function SimpleListEditor({
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t">
-        <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+        {/* <Button variant="outline" onClick={onCancel} disabled={isSaving}> */}
+        <Button variant="outline" onClick={onCancel} disabled={isActuallySaving || isSaving}>
           Cancel
         </Button>
-        <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Changes"}
+        <Button onClick={handleSaveChanges} disabled={isActuallySaving || isSaving}>
+          {isActuallySaving || isSaving ? "Saving..." : "Save Changes"}
         </Button>
+        {/* <Button onClick={onSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button> */}
       </div>
     </div>
   );

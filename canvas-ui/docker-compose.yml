@@ -4,7 +4,7 @@ services:
   canvas-ui:
     build: .
     ports:
-      - "3001:3000" # Change the exposed port to avoid conflicts
+      - "3001:3001" # Change the exposed port to avoid conflicts
     volumes:
       - /app/node_modules
     environment:

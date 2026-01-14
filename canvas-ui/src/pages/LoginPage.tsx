@@ -33,7 +33,8 @@ const LoginPage = () => {
         sessionStorage.setItem('userId', userId);
         
         // Navigate to dashboard
-        navigate('/DashboardPage');
+        window.location.href = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/#/`;
+        window.location.reload();
       } else {
         setError('Login failed. Please check your user ID.');
         console.error('Login failed');
@@ -46,11 +47,11 @@ const LoginPage = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSubmit();
-    }
-  };
+  // const handleKeyPress = (e) => {
+  //   if (e.key === 'Enter') {
+  //     handleSubmit();
+  //   }
+  // };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -77,7 +78,7 @@ const LoginPage = () => {
               type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              onKeyPress={handleKeyPress}
+              // onKeyPress={handleKeyPress}
               placeholder="Enter your user ID"
               className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               required

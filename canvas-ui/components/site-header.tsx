@@ -5,11 +5,18 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
+import { useEffect } from "react"
+import { logout } from "@/src/lib/auth"
 
 
 export function SiteHeader() {
-  const pathname = useHashPath()
+  const pathname = useHashPath();
   const isDashboardPage = pathname === "/";
+
+  const handleLogout = () => {
+    // Use the proper logout function that handles Keycloak logout
+    logout();
+  };
 
   return (
     <header className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-[var(--header-height)]">
@@ -31,26 +38,27 @@ export function SiteHeader() {
             <Button
               onClick={async () => {
                 try {
-                  const userId = sessionStorage.getItem('userId');
-                    if (!userId) {
-                    alert('User not logged in');
+                  const userId = sessionStorage.getItem("userId");
+                  if (!userId) {
+                    alert("User not logged in");
                     return;
-                    }
+                  }
                 } catch (err) {
                   console.error("Failed to call canvas create API", err);
                 }
-                window.location.hash = linkTo('/canvas/create');
-                // window.location.hash = linkTo("/canvas/create");
+                window.location.hash = linkTo("/canvas/create");
               }}
             >
               <Plus className="h-4 w-4" />
               Create New
             </Button>
           )}
+          <Button onClick={handleLogout} className="ml-2">
+            Logout
+          </Button>
           <div id="page-actions" className="flex items-center gap-2" />
         </div>
       </div>
     </header>
-  )
+  );
 }
- 

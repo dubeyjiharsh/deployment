@@ -8,5 +8,5 @@ export const API_ENDPOINTS = {
   canvasDelete: (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}`,
   canvasFields: (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}/fields`,
   canvasSave : (canvasId: string) => `${API_BASE_URL}/api/canvas/${canvasId}/save_canvas`,
-  canvasDownload: (canvasId: string, format: string) => `${API_BASE_URL}/api/canvas/${canvasId}/generate-document?format=${format}`,
+  canvasDownload: (canvasId: string, format: string) => `${API_BASE_URL}/api/canvas/${canvasId}/export-canvas?format=${format}`,
 };

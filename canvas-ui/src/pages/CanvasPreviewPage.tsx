@@ -166,6 +166,7 @@ export function CanvasPreviewPage(): React.ReactElement {
       setJsonData(data.fields || data);
       setCanvas(transformFieldsToCanvas(data.fields || data));
       toast.success("Canvas saved successfully!");
+      window.location.reload(); // Reload the page to reflect updates
     } catch (error) {
       toast.error("Failed to save canvas");
       console.error("Failed to save canvas:", error);
