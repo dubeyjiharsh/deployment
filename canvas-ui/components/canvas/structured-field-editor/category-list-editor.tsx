@@ -335,7 +335,8 @@ export function CategoryListEditor({
               </CollapsibleTrigger>
 
               <CollapsibleContent>
-                <CardContent className="pt-0 pb-4 px-4">
+                {/* Make card content scrollable if too tall */}
+                <CardContent className="pt-0 pb-4 px-4 max-h-64 overflow-y-auto">
                   <div className="space-y-2">
                     {/* Existing items */}
                     {items.map((item, index) => (
@@ -349,6 +350,7 @@ export function CategoryListEditor({
                         onFinishEdit={() => setEditingItem(null)}
                         onChange={(newText) => handleUpdateItem(key, index, newText)}
                         onDelete={() => handleDeleteItem(key, index)}
+                        textClassName="break-words"
                       />
                     ))}
 
@@ -406,6 +408,7 @@ interface CategoryItemProps {
   onFinishEdit: () => void;
   onChange: (newText: string) => void;
   onDelete: () => void;
+  textClassName?: string;
 }
 
 function CategoryItem({
@@ -415,6 +418,7 @@ function CategoryItem({
   onFinishEdit,
   onChange,
   onDelete,
+  textClassName,
 }: CategoryItemProps): React.ReactElement {
   const [editText, setEditText] = React.useState(text);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -480,7 +484,10 @@ function CategoryItem({
       </div>
 
       <div
-        className="flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30"
+        className={cn(
+          "flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30 break-words",
+          textClassName || ""
+        )}
         onClick={onStartEdit}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

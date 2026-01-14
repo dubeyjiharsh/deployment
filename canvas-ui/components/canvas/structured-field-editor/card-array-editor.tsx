@@ -480,7 +480,8 @@ export function CardArrayEditor({
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
-                  <CardContent className="pt-0 pb-4 px-4">
+                  {/* Make card content scrollable if too tall */}
+                  <CardContent className="pt-0 pb-4 px-4 max-h-64 overflow-y-auto">
                     <div className="grid gap-4">
                       {fields.map((field) => (
                         <CardField
@@ -552,7 +553,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-xs text-muted-foreground break-words">
         {field.label}
         {field.required && <span className="text-destructive ml-1">*</span>}
       </Label>
@@ -563,7 +564,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          className="min-h-[60px] resize-none text-sm"
+          className="min-h-[60px] resize-none text-sm break-words"
         />
       ) : field.type === "select" && field.options ? (
         <Select
@@ -587,7 +588,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          className="h-9"
+          className="h-9 break-words"
         />
       )}
     </div>

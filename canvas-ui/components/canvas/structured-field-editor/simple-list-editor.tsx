@@ -247,7 +247,7 @@ export function SimpleListEditor({
   return (
     <div className="space-y-4">
       {/* List items */}
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-64 overflow-y-auto">
         {items.map((item, index) => (
           <ListItem
             key={`${index}-${item.slice(0, 30)}`}
@@ -379,7 +379,8 @@ function ListItem({
       className={cn(
         "flex items-center gap-2 group rounded-lg border bg-card",
         "hover:shadow-sm transition-all",
-        "px-2 py-1"
+        "px-2 py-1",
+        "max-w-full break-words"
       )}
     >
       {/* Drag handle */}
@@ -425,11 +426,13 @@ function ListItem({
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          className="flex-1 h-8"
+          className="flex-1 h-8 break-words whitespace-pre-line"
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         />
       ) : (
         <div
-          className="flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30"
+          className="flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30 break-words whitespace-pre-line"
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           onClick={onStartEdit}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
