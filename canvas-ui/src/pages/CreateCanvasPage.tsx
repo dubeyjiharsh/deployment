@@ -5,8 +5,38 @@ import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
- 
+import { MarkdownContent } from "./MarkdownContent";
+function toMarkdownString(content: unknown): string {
+  if (typeof content === "string") return content;
 
+  // If backend sometimes sends: { text: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "text" in content &&
+    typeof (content as any).text === "string"
+  ) {
+    return (content as any).text;
+  }
+
+  // If backend sometimes sends: { content: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "content" in content &&
+    typeof (content as any).content === "string"
+  ) {
+    return (content as any).content;
+  }
+
+  // Fallback: show something readable (but not JSON.stringify spam)
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
+}
+ 
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
   const [files, setFiles] = React.useState<File[]>([]);
@@ -16,6 +46,7 @@ export function CreateCanvasPage(): React.ReactElement {
   const [ideaError, setIdeaError] = React.useState<string | null>(null);
   const [showPreviewAlert, setShowPreviewAlert] = React.useState(false);
   const [errorMessages, setErrorMessages] = React.useState<string[]>([]);
+  
 
   const initialized = React.useRef(false);
  
@@ -45,7 +76,7 @@ export function CreateCanvasPage(): React.ReactElement {
           if (Array.isArray(history)) {
             const mapped = history.map((m: any) => ({
               role: m.role || "assistant",
-              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+              content: toMarkdownString(m.content),
             }));
             setChat(mapped);
             sessionStorage.setItem("chatState", JSON.stringify(mapped));
@@ -114,20 +145,13 @@ export function CreateCanvasPage(): React.ReactElement {
         return false;
       }
       if (!allowedTypes.includes(file.type) || !ext || !allowedExtensions.includes(ext)) {
-        newErrors.push(`File ${file.name} is unsupported file type. Supported file format is PDF`);
+        newErrors.push(`File ${file.name} is unsupported file type.`);
         return false;
       }
       return true;
     });
 
     newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
-
-    // Enforce max file limit
-    if (files.length + newFiles.length > maxFiles) {
-      newErrors.push(`You can only upload up to ${maxFiles} files.`);
-      // Only add up to the allowed number of files
-      newFiles = newFiles.slice(0, Math.max(0, maxFiles - files.length));
-    }
 
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
@@ -145,22 +169,16 @@ export function CreateCanvasPage(): React.ReactElement {
     if (showPreviewAlert && (value.length > 0 || files.length > 0)) {
       setShowPreviewAlert(false);
     }
-    // Only show error for blank/whitespace, not for min 10 chars
-    if (value.length === 0) {
-      setIdeaError(null);
-    } else if (/^\s*$/.test(value)) {
-      setIdeaError("Input cannot be blank or whitespace only.");
-    } else if (value.trim().length < 10) {
-      setIdeaError(null);
+    if (value.length < 10) {
+      setIdeaError("Please enter at least 10 characters before sending.");
     } else {
       setIdeaError(null);
     }
   };
  
   const handleSubmit = async () => {
-    // Only allow submit if text is present (>=10 chars), regardless of files
-    if (!idea || idea.trim().length < 10 || !canvasId) {
-      setIdeaError("Input must be at least 10 non-blank characters.");
+    if (!idea || idea.length < 10 || !canvasId) {
+      setIdeaError("Please enter at least 10 characters.");
       return;
     }
     const userMsg = { role: "user", content: idea };
@@ -183,14 +201,29 @@ export function CreateCanvasPage(): React.ReactElement {
         }
       );
 
-      const history = response.data.conversation_history;
-      if (Array.isArray(history)) {
-        const mapped = history.map((m: any) => ({
-          role: m.role || "assistant",
-          content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-        }));
-        setChat(mapped);
-        sessionStorage.setItem("chatState", JSON.stringify(mapped));
+      // Show chat_response in chat UI
+      const chatResponse = response.data.chat_response;
+      if (chatResponse) {
+        setChat((prev) => [
+          ...prev,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]);
+        sessionStorage.setItem("chatState", JSON.stringify([
+          ...chat,
+          userMsg,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]));
+      } else {
+        // fallback to conversation_history if present
+        const history = response.data.conversation_history;
+        if (Array.isArray(history)) {
+          const mapped = history.map((m: any) => ({
+            role: m.role || "assistant",
+            content: toMarkdownString(m.content),
+          }));
+          setChat(mapped);
+          sessionStorage.setItem("chatState", JSON.stringify(mapped));
+        }
       }
       if (response.data?.canvas_json) {
         sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
@@ -253,7 +286,11 @@ export function CreateCanvasPage(): React.ReactElement {
             {chat.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <MarkdownContent content={msg.content} />
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -261,9 +298,18 @@ export function CreateCanvasPage(): React.ReactElement {
         </div>
 
         <div className="w-full max-w-2xl mx-auto p-6 bg-white">
-          {/* {showPreviewAlert && (
-            // <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center text-sm">Please enter a message or attach a file before previewing.</div>
-          )} */}
+          {errorMessages.length > 0 && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded error-container">
+              <ul className="list-disc pl-5">
+                {errorMessages.map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {showPreviewAlert && (
+            <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center text-sm">Please enter a message or attach a file before previewing.</div>
+          )}
           {files.length > 0 && (
             <div className="bg-white rounded-lg p-3 mb-2 border">
               <table className="w-full text-sm">
@@ -306,34 +352,9 @@ export function CreateCanvasPage(): React.ReactElement {
                 placeholder="Type your message..."
                 className="bg-white h-20 w-full pr-36"
                 disabled={isLoading}
+                minLength={10}
+                aria-invalid={!!ideaError}
               />
-              {/* Error and character count on the same line */}
-              <div className="flex flex-col gap-1 mt-1">
-                {/* Show ideaError only for blank/whitespace, not for min 10 chars */}
-                {ideaError && (
-                  <div className="flex flex-row items-center justify-between">
-                    <div className="text-red-500 text-xs">{ideaError}</div>
-                    <div className="text-xs text-gray-400 select-none ml-auto">{idea.length}/1000</div>
-                  </div>
-                )}
-                {/* Show all other errors in the same style */}
-                {errorMessages.map((error, idx) => (
-                  <div key={idx} className="flex flex-row items-center justify-between">
-                    <div className="text-red-500 text-xs">{error}</div>
-                    {/* Only show char count for the first error row if ideaError is not present */}
-                    {(!ideaError && idx === 0) && (
-                      <div className="text-xs text-gray-400 select-none ml-auto">{idea.length}/1000</div>
-                    )}
-                  </div>
-                ))}
-                {/* If no errors, show char count alone */}
-                {!ideaError && errorMessages.length === 0 && (
-                  <div className="flex flex-row items-center justify-between">
-                    <div></div>
-                    <div className="text-xs text-gray-400 select-none ml-auto">{idea.length}/1000</div>
-                  </div>
-                )}
-              </div>
               {/* All three buttons in a row, right-aligned */}
               <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
                 <button
@@ -346,10 +367,10 @@ export function CreateCanvasPage(): React.ReactElement {
                   </svg>
                 </button>
                 <button
-                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.trim().length < 10 ? 'opacity-50' : 'opacity-100'}`}
+                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.length < 10 ? 'opacity-50' : 'opacity-100'}`}
                   onClick={handleSubmit}
-                  disabled={isLoading || !idea || idea.trim().length < 10}
-                  aria-disabled={isLoading || !idea || idea.trim().length < 10}
+                  disabled={isLoading || !idea || idea.length < 10}
+                  aria-disabled={isLoading || !idea || idea.length < 10}
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -366,11 +387,17 @@ export function CreateCanvasPage(): React.ReactElement {
                   onChange={(e) => handleFileUpload(e.target.files)}
                 />
               </div>
+              {ideaError && (
+                <div className="text-red-500 text-xs mt-1">{ideaError}</div>
+              )}
+              <div className="text-xs text-gray-400 select-none mt-1">
+                {idea.length}/1000
+              </div>
             </div>
             {/* Preview button outside the input box */}
             <button
-              className={`flex-shrink-0 p-3 bg-white border rounded-full shadow mt-1 ${chat.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-              onClick={chat.length === 0 ? undefined : handlePreview}
+              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              onClick={handlePreview}
               disabled={chat.length === 0}
               aria-disabled={chat.length === 0}
             >

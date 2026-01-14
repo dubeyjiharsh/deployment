@@ -236,7 +236,12 @@ export function DashboardPage(): React.ReactElement {
                   </CardHeader>
                   <CardContent className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
-                      {canvas.created_at ? `Updated ${formatDistanceToNow(new Date(canvas.created_at), { addSuffix: true })}` : ""}
+                      {canvas.created_at ? (() => {
+                        const minutes = Math.floor((Date.now() - new Date(canvas.created_at).getTime()) / 60000);
+                        if (minutes < 1) return "Updated just now";
+                        if (minutes === 1) return "Updated about 1 min ago";
+                        return `Updated about ${minutes} min ago`;
+                      })() : ""}
                     </div>
                     <div className="flex gap-4 items-center">
                       <div
