@@ -1,12 +1,12 @@
 # Use an official lightweight Python image
 # ---------- Builder ----------
-FROM python:3.11.14-slim-bookworm AS builder
+FROM python:3.11.14-slim-bookworm@sha256:30f12e0592b7d24ca9a80d6d93701981291fcc452e9f9fb4174ef80deb1217af AS builder
 
 # Set a working directory
 WORKDIR /app
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \ 
- && sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources || true
+&& sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources || true
 
 # Patch OS packages in builder image
 RUN apt-get update && \ 
@@ -20,20 +20,20 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Upgrade pip to a known-good version (CVE-2025-8869 fixed in 25.3 per scan report)
 ARG PIP_VERSION=25.3
- 
+
 # Install deps separately for caching
 COPY requirements.lock .
 RUN python -m pip install --no-cache-dir --upgrade "pip==${PIP_VERSION}" \ 
- && pip wheel --no-cache-dir --wheel-dir /wheels --only-binary :all: -r requirements.lock
+&& pip wheel --no-cache-dir --wheel-dir /wheels --only-binary :all: -r requirements.lock
 
 # Install dependencies into venv from wheelhouse only (reduces dependency confusion risk)
 RUN pip install --no-cache-dir --no-index --find-links=/wheels --require-hashes -r requirements.lock
 
 # ---------- Runtime ----------
-FROM python:3.11.14-slim-bookworm AS runtime
+FROM python:3.11.14-slim-bookworm@sha256:30f12e0592b7d24ca9a80d6d93701981291fcc452e9f9fb4174ef80deb1217af AS runtime
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \ 
- && sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources || true
+&& sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources || true
 
 # Patch OS packages in builder image
 RUN apt-get update && \ 
@@ -50,7 +50,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Create a non-root user to run the app
 RUN groupadd --system appuser \ 
- && useradd --system --gid appuser --create-home --home-dir /home/appuser appuser
+&& useradd --system --gid appuser --create-home --home-dir /home/appuser appuser
 
 # Set a working directory
 WORKDIR /app
