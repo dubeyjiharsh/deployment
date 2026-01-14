@@ -4,17 +4,16 @@ import aiofiles
 from typing import List
 from docx import Document
 from fastapi import UploadFile
-from openai import AzureOpenAI
+from openai import OpenAI
 from config import settings
 
 class FileService:
     """Service for handling file uploads and management"""
     
     def __init__(self):
-        self.client = AzureOpenAI(
-            api_version=settings.AZURE_OPENAI_API_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-            api_key=settings.AZURE_OPENAI_API_KEY
+        self.client = OpenAI(
+            base_url=settings.AZURE_OPENAI_ENDPOINT+"openai/v1/",
+            api_key=settings.AZURE_OPENAI_API_KEY,
         )
         self._ensure_upload_dir()
     
