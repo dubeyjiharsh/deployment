@@ -18,7 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import {
   NFR_CATEGORY_LABELS,
-  SCOPE_CATEGORY_LABELS,
+  // SCOPE_CATEGORY_LABELS,
   nfrCategoryKeys,
 } from "@/lib/validators/structured-field-schemas";
 import type { StructuredFieldEditorProps } from "./index";
@@ -44,11 +44,11 @@ function getCategoryConfig(fieldKey: string): CategoryConfig[] {
         label: NFR_CATEGORY_LABELS[key],
       }));
 
-    case "scopeDefinition":
-      return [
-        { key: "inScope", label: SCOPE_CATEGORY_LABELS.inScope },
-        { key: "outOfScope", label: SCOPE_CATEGORY_LABELS.outOfScope },
-      ];
+    // case "scopeDefinition":
+    //   return [
+    //     { key: "inScope", label: SCOPE_CATEGORY_LABELS.inScope },
+    //     { key: "outOfScope", label: SCOPE_CATEGORY_LABELS.outOfScope },
+    //   ];
 
     default:
       // For unknown objects, use the keys as labels

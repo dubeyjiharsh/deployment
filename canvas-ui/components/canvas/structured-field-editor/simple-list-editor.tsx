@@ -93,7 +93,7 @@ function transformFieldsToCanvas(fields: any) {
     nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
     useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
     governance: makeField(fields.Governance || fields.governance || {}),
-    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevantFacts)),
+    relevantFacts: makeField(parseArray(fields.relevantFacts || fields.relevantFacts)),
     createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
     updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
   };

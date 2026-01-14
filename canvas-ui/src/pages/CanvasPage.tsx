@@ -117,11 +117,13 @@ export function CanvasPage(): React.ReactElement {
  
           <h2 className="text-xl font-semibold">Key Features</h2>
           <ul className="list-disc pl-6">
-            {canvas.keyFeatures?.value?.map((feature: any, index: number) => (
-              <li key={index}>
-                <strong>{feature.feature}:</strong> {feature.description}
-              </li>
-            ))}
+            {Array.isArray(canvas.keyFeatures?.value)
+              ? canvas.keyFeatures.value.map((feature: any, index: number) => (
+                  <li key={index}>
+                    <strong>{feature.feature}:</strong> {feature.description}
+                  </li>
+                ))
+              : null}
           </ul>
  
           <h2 className="text-xl font-semibold">Risks</h2>
@@ -141,20 +143,17 @@ export function CanvasPage(): React.ReactElement {
  
           <h2 className="text-xl font-semibold">Non Functional Requirements</h2>
           <ul className="list-disc pl-6">
-            {(Array.isArray(canvas.nonFunctionalRequirements && (canvas.nonFunctionalRequirements as any).value)
-              ? (canvas.nonFunctionalRequirements as any).value
-              : [])
-              .map((nfr: any, index: number) =>
-                typeof nfr === "string" ? (
-                  <li key={index}>{nfr}</li>
-                ) : (
-                  <li key={index}>
-                    <strong>{nfr.category ? `${nfr.category}: ` : ""}</strong>
-                    {nfr.requirement}
-                    {nfr.rationale ? <span> <em>({nfr.rationale})</em></span> : null}
-                  </li>
+            {Array.isArray(canvas.nonFunctionalRequirements?.value)
+              ? canvas.nonFunctionalRequirements.value.map((nfr: any, index: number) =>
+                  typeof nfr === "string" ? (
+                    <li key={index}>{nfr}</li>
+                  ) : (
+                    <li key={index}>
+                      <strong>{nfr.requirement}:</strong> {nfr.details}
+                    </li>
+                  )
                 )
-              )}
+              : null}
           </ul>
         </div>
       </div>
@@ -172,5 +171,4 @@ export function CanvasPage(): React.ReactElement {
     </>
   );
 }
- 
- 
+

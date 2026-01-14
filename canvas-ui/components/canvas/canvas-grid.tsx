@@ -29,7 +29,7 @@ import {
   NFR_CATEGORY_LABELS,
   nfrCategoryKeys,
   GOVERNANCE_CATEGORY_LABELS,
-  SCOPE_CATEGORY_LABELS,
+  // SCOPE_CATEGORY_LABELS,
 } from "@/lib/validators/structured-field-schemas";
  
 function isCanvasField(value: unknown): value is CanvasField<unknown> {
@@ -400,26 +400,25 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     closeEdit();
   };
  
-  // Add Relevant Facts to the card configs if not present
+  // // Add Relevant Facts to the card configs if not present
   let contentConfigs = allConfigs.filter(
     (f) => f.fieldKey !== "title" && f.fieldKey !== "problemStatement" && f.fieldKey !== "solutionRecommendation"
   );
-  // Ensure Relevant Facts is included
-  if (!contentConfigs.some(f => f.fieldKey === "relevantFacts")) {
-    contentConfigs.push({
-      id: "relevantFacts",
-      name: "Relevant Facts",
-      fieldKey: "relevantFacts",
-      type: "default",
-      category: "core",
-      enabled: true,
-      includeInGeneration: true,
-      order: 99,
-      valueType: "object",
-      instructions: "Add any facts relevant to the canvas.",
-      description: "Relevant facts for this canvas."
-    });
-  }
+  // // Ensure Relevant Facts is included
+  // if (!contentConfigs.some(f => f.fieldKey === "relevantFacts")) {
+  //   contentConfigs.push({
+  //     id: "relevantFacts",
+  //     name: "Relevant Facts",
+  //     fieldKey: "relevantFacts",
+  //     type: "default",
+  //     category: "core",
+  //     enabled: true,
+  //     includeInGeneration: true,
+  //     order: 99,
+  //     valueType: "object",
+  //     // instructions: "Add any facts relevant to the canvas.",
+  //     description: "Relevant facts for this canvas."
+  //   
  
   const handleFileUpload = (files: FileList | null) => {
     if (files) {

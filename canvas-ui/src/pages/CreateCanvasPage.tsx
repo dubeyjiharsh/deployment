@@ -7,13 +7,17 @@ import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
 import { getToken } from "@/src/lib/auth";
  
+
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
-  const [file, setFile] = React.useState<File | null>(null);
+  const [files, setFiles] = React.useState<File[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [chat, setChat] = React.useState<Array<{role: string, content: string}>>([]);
   const [canvasId, setCanvasId] = React.useState<string | null>(null);
- 
+  const [ideaError, setIdeaError] = React.useState<string | null>(null);
+  const [showPreviewAlert, setShowPreviewAlert] = React.useState(false);
+  const [errorMessages, setErrorMessages] = React.useState<string[]>([]);
+
   const initialized = React.useRef(false);
  
   React.useEffect(() => {
@@ -95,21 +99,67 @@ export function CreateCanvasPage(): React.ReactElement {
     initPage();
   }, []);
  
-  const handleFileUpload = (files: FileList | null) => {
-    if (files && files.length > 0) setFile(files[0]);
+
+  const handleFileUpload = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const allowedTypes = ["application/pdf"];
+    const allowedExtensions = ["pdf"];
+    const maxSizeMB = 5;
+    const maxFiles = 10;
+
+    const newErrors: string[] = [];
+    let newFiles: File[] = Array.from(fileList).filter(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (file.size / (1024 * 1024) > maxSizeMB) {
+        newErrors.push(`File ${file.name} exceeds the maximum size of ${maxSizeMB}MB.`);
+        return false;
+      }
+      if (!allowedTypes.includes(file.type) || !ext || !allowedExtensions.includes(ext)) {
+        newErrors.push(`File ${file.name} is unsupported file type.`);
+        return false;
+      }
+      return true;
+    });
+
+    newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
+
+    if (newFiles.length > 0) {
+      setFiles(prev => [...prev, ...newFiles]);
+      setShowPreviewAlert(false);
+      // Ensure notification is triggered only once
+      console.log(`${newFiles.length} file(s) uploaded successfully.`);
+    }
+
+    setErrorMessages(newErrors);
+  };
+
+  const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setIdea(value);
+    if (showPreviewAlert && (value.length > 0 || files.length > 0)) {
+      setShowPreviewAlert(false);
+    }
+    if (value.length < 10) {
+      setIdeaError("Please enter at least 10 characters before sending.");
+    } else {
+      setIdeaError(null);
+    }
   };
  
   const handleSubmit = async () => {
-    if (!idea || !canvasId) return;
+    if (!idea || idea.length < 10 || !canvasId) {
+      setIdeaError("Please enter at least 10 characters.");
+      return;
+    }
     const userMsg = { role: "user", content: idea };
     setChat((prev) => [...prev, userMsg]);
     setIsLoading(true);
- 
+
     try {
       const formData = new FormData();
       formData.append("message", idea);
-      if (file) formData.append("files", file);
- 
+      files.forEach(file => formData.append("files", file));
+
       const response = await axios.post(
         API_ENDPOINTS.canvasMessage(canvasId),
         formData,
@@ -120,7 +170,7 @@ export function CreateCanvasPage(): React.ReactElement {
           },
         }
       );
- 
+
       const history = response.data.conversation_history;
       if (Array.isArray(history)) {
         const mapped = history.map((m: any) => ({
@@ -133,7 +183,7 @@ export function CreateCanvasPage(): React.ReactElement {
       if (response.data?.canvas_json) {
         sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
       }
-      setFile(null);
+      setFiles([]);
     } catch (error) {
       console.error("Submit error:", error);
     } finally {
@@ -143,11 +193,32 @@ export function CreateCanvasPage(): React.ReactElement {
   };
  
   const handlePreview = () => {
+    // Block preview if there is no chat history for this canvasId
+    if (chat.length === 0) {
+      setShowPreviewAlert(true);
+      return;
+    }
+    setShowPreviewAlert(false);
     if (!canvasId) return;
     sessionStorage.setItem("chatState", JSON.stringify(chat));
     navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`);
   };
  
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".error-container")) {
+        setErrorMessages([]);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="p-6 flex flex-col w-full max-w-3xl h-[90vh]">
@@ -166,7 +237,7 @@ export function CreateCanvasPage(): React.ReactElement {
               </div>
             </div>
           )}
-          <div className="flex flex-col gap-4 relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent px-1" style={{ flex: 1, minHeight: 0 }}>
+          <div className="flex flex-col gap-4 relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent px-1" style={{ flex: 1, minHeight: 0 }}>
             {chat.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
@@ -178,22 +249,65 @@ export function CreateCanvasPage(): React.ReactElement {
         </div>
 
         <div className="w-full max-w-2xl mx-auto p-6 bg-white">
-          {file && (
-             <div className="bg-white rounded-lg p-3 mb-2 flex justify-between items-center border">
-               <span className="text-sm font-medium">{file.name}</span>
-               <button onClick={() => setFile(null)} className="text-red-500">✕</button>
-             </div>
+          {errorMessages.length > 0 && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded error-container">
+              <ul className="list-disc pl-5">
+                {errorMessages.map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </div>
           )}
-          <div className="flex items-center w-full gap-2">
-            <div className="relative flex-grow">
+          {showPreviewAlert && (
+            <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center text-sm">Please enter a message or attach a file before previewing.</div>
+          )}
+          {files.length > 0 && (
+            <div className="bg-white rounded-lg p-3 mb-2 border">
+              <table className="w-full text-sm">
+                {/* <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-1">Name</th>
+                    <th className="text-left py-1">Type</th>
+                    <th className="text-left py-1">Size</th>
+                    <th className="text-left py-1">Action</th>
+                  </tr>
+                </thead> */}
+                <tbody>
+                  {files.map((file, idx) => (
+                    <tr key={file.name + file.size} className="border-b last:border-b-0">
+                      <td className="py-1">{file.name}</td>
+                      <td className="py-1">{file.type === "application/pdf" ? "PDF" : "DOCX"}</td>
+                      <td className="py-1">{(file.size / 1024).toFixed(2)} KB</td>
+                      <td className="py-1">
+                        <button className="text-red-500 text-xs" onClick={() => {
+                          setFiles(files.filter((_, i) => i !== idx));
+                          // Reset file input so same file can be uploaded again
+                          const input = document.getElementById('file-input') as HTMLInputElement;
+                          if (input) input.value = "";
+                        }}>Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex items-start w-full gap-2">
+            <div className="flex-1 min-w-0 relative">
               <Textarea
                 value={idea}
-                onChange={(e) => setIdea(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value.length <= 1000) setIdea(e.target.value);
+                }}
+                maxLength={1000}
                 placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-28"
+                className="bg-white h-20 w-full pr-36"
                 disabled={isLoading}
+                minLength={10}
+                aria-invalid={!!ideaError}
               />
-              <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-2">
+              {/* All three buttons in a row, right-aligned */}
+              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
@@ -204,9 +318,10 @@ export function CreateCanvasPage(): React.ReactElement {
                   </svg>
                 </button>
                 <button
-                  className="p-2 bg-blue-500 rounded-full text-white flex items-center justify-center"
+                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.length < 10 ? 'opacity-50' : 'opacity-100'}`}
                   onClick={handleSubmit}
-                  disabled={isLoading || !idea}
+                  disabled={isLoading || !idea || idea.length < 10}
+                  aria-disabled={isLoading || !idea || idea.length < 10}
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -214,14 +329,30 @@ export function CreateCanvasPage(): React.ReactElement {
                     "➤"
                   )}
                 </button>
+                <input
+                  id="file-input"
+                  type="file"
+                  style={{ display: "none" }}
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  multiple={true}
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                />
               </div>
-              <input
-                id="file-input" type="file" style={{ display: "none" }}
-                onChange={(e) => handleFileUpload(e.target.files)}
-              />
+              {ideaError && (
+                <div className="text-red-500 text-xs mt-1">{ideaError}</div>
+              )}
+              <div className="text-xs text-gray-400 select-none mt-1">
+                {idea.length}/1000
+              </div>
             </div>
-            <button className="p-2 bg-white border rounded-full shadow hover:bg-gray-50" onClick={handlePreview}>
-               <img src="/dist/images/preview.png" alt="Preview" className="h-6 w-6" />
+            {/* Preview button outside the input box */}
+            <button
+              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              onClick={handlePreview}
+              disabled={chat.length === 0}
+              aria-disabled={chat.length === 0}
+            >
+              <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
             </button>
           </div>
         </div>
