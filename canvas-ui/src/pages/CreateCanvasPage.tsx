@@ -390,8 +390,10 @@ export function CreateCanvasPage(): React.ReactElement {
               {ideaError && (
                 <div className="text-red-500 text-xs mt-1">{ideaError}</div>
               )}
-              <div className="text-xs text-gray-400 select-none mt-1">
-                {idea.length}/1000
+              <div className="flex justify-end">
+                <div className="text-xs text-gray-400 select-none mt-1 text-right">
+                  {idea.length}/1000
+                </div>
               </div>
             </div>
             {/* Preview button outside the input box */}

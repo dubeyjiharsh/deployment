@@ -202,7 +202,7 @@ export function DashboardPage(): React.ReactElement {
             )}
             {filteredCanvases.map((canvas) => (
               <div key={canvas.canvas_id} className="block">
-                <Card className="border cursor-pointer transition-colors hover:bg-muted/30 relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between">
+                <Card className="border relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between">
                   <div className="absolute top-2 right-2 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -237,22 +237,30 @@ export function DashboardPage(): React.ReactElement {
                   <CardContent className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
                       {canvas.created_at ? (() => {
-                        const minutes = Math.floor((Date.now() - new Date(canvas.created_at).getTime()) / 60000);
-                        if (minutes < 1) return "Updated just now";
-                        if (minutes === 1) return "Updated about 1 min ago";
-                        return `Updated about ${minutes} min ago`;
+                        const now = Date.now();
+                        const created = new Date(canvas.created_at).getTime();
+                        const diffMinutes = Math.floor((now - created) / 60000);
+                        if (diffMinutes < 1) return "Updated just now";
+                        if (diffMinutes === 1) return "Updated about 1 minute ago";
+                        if (diffMinutes < 60) return `Updated about ${diffMinutes} minutes ago`;
+                        const diffHours = Math.floor(diffMinutes / 60);
+                        if (diffHours === 1) return "Updated about 1 hour ago";
+                        if (diffHours < 24) return `Updated about ${diffHours} hours ago`;
+                        const diffDays = Math.floor(diffHours / 24);
+                        if (diffDays === 1) return "Updated 1 day ago";
+                        return `Updated  ${diffDays} days ago`;
                       })() : ""}
                     </div>
                     <div className="flex gap-4 items-center">
                       <div
-                        className="text-sm text-primary cursor-pointer underline"
+                        className="text-sm text-primary cursor-pointer underline hover:bg-muted/30 rounded px-1"
                         style={{ textDecoration: 'underline' }}
                         onClick={(e) => handleEditCanvas(canvas.canvas_id, e)}
                       >
                         Edit canvas
                       </div>
                       <div
-                        className="text-sm text-primary cursor-pointer underline"
+                        className="text-sm text-primary cursor-pointer underline hover:bg-muted/30 rounded px-1"
                         onClick={() => {
                           sessionStorage.setItem("canvasJson", JSON.stringify(canvas));
                           sessionStorage.setItem("canvasId", canvas.canvas_id);
