@@ -153,6 +153,18 @@ export function CreateCanvasPage(): React.ReactElement {
 
     newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
 
+    // Enforce maxFiles limit
+    if (files.length + newFiles.length > maxFiles) {
+      const allowedCount = Math.max(0, maxFiles - files.length);
+      if (allowedCount > 0) {
+        newFiles = newFiles.slice(0, allowedCount);
+        newErrors.push(`You can only upload up to ${maxFiles} files. Some files were not added.`);
+      } else {
+        newFiles = [];
+        newErrors.push(`You can only upload up to ${maxFiles} files.`);
+      }
+    }
+
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
       setShowPreviewAlert(false);
