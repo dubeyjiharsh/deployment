@@ -1,21 +1,30 @@
 import os
 from dotenv import load_dotenv
+from keys.bao_store import read_bao_secret
+import logging
 
 load_dotenv()
 
 class Settings:
-    # Azure OpenAI Configuration
-    AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-    AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
-    AZURE_OPENAI_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o-mini")
+    """Application configuration settings loaded from environment variables and OpenBao.""" 
+
     
+    # dynamic function to fetch AI Force bearer token from OpenBAO
+    @staticmethod
+    def get_aiforce_config():
+        return read_bao_secret(env="dev", app="aiforce") or {}
+
+    # Dynamic function to fetch Azure OpenAI credentials from OpenBAO
+    @staticmethod
+    def get_azure_openai_config():
+        return read_bao_secret(env="dev", app="llm") or {}
+
     # PostgreSQL Configuration
-    DB_HOST = os.getenv("DB_HOST")
-    DB_PORT = os.getenv("DB_PORT")
-    DB_NAME = os.getenv("DB_NAME")
-    DB_USER = os.getenv("DB_USER")
-    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+    POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+    POSTGRES_DB = os.getenv("POSTGRES_DB")
+    POSTGRES_USER = os.getenv("POSTGRES_USER")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
     
     # Application Settings
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS") != "*" else ["*"]
@@ -27,7 +36,7 @@ class Settings:
     @classmethod
     def validate(cls):
         """Validate required environment variables"""
-        required = ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "DB_HOST", "DB_NAME", "DB_USER"]
+        required = ["POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_USER"]
         missing = [var for var in required if not getattr(cls, var)]
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")

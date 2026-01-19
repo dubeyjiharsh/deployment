@@ -4,7 +4,7 @@ import warnings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
-from api import canvas_routes, chat_routes
+from api import bao_routes, canvas_routes, chat_routes, user_routes
 import sys
 
 # Ignore deprecation warnings
@@ -29,6 +29,8 @@ app.add_middleware(
 # Include routers
 app.include_router(canvas_routes.router)
 app.include_router(chat_routes.router)
+app.include_router(bao_routes.router)
+app.include_router(user_routes.router)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

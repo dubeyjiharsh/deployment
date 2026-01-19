@@ -9,11 +9,28 @@ from utils.json_parser import parse_dual_response
 class ResponsesService:
     """Service for managing Azure OpenAI Responses"""
 
-    def __init__(self):
-        self.client = OpenAI(
-            base_url=settings.AZURE_OPENAI_ENDPOINT+"openai/v1/",
-            api_key=settings.AZURE_OPENAI_API_KEY,
+    _client = None
+    _last_config = None
+
+    @classmethod
+    def reload_client(cls):
+        azure_config = settings.get_azure_openai_config()
+        cls._client = OpenAI(
+            base_url=azure_config.get("azure_openai_endpoint", "")+"openai/v1/",
+            api_key=azure_config.get("azure_openai_api_key", ""),
         )
+        cls._last_config = azure_config
+
+    def __init__(self):
+        if not self.__class__._client:
+            self.__class__.reload_client()
+        self.azure_config = self.__class__._last_config
+
+    @property
+    def client(self):
+        if not self.__class__._client:
+            self.__class__.reload_client()
+        return self.__class__._client
 
     def send_message(
         self,
@@ -52,7 +69,7 @@ class ResponsesService:
             input_data[0]['content'].append({"type": "input_text", "text": prompt})
             # Send message to thread
             response = self.client.responses.create(
-                model=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+                model=self.azure_config.get("azure_openai_deployment_name", ""),
                 instructions=get_system_prompt(),
                 input = input_data,
             )
@@ -63,10 +80,9 @@ class ResponsesService:
             # Send message to thread
             response = self.client.responses.create(
                 previous_response_id=previous_response_id,
-                model=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+                model=self.azure_config.get("azure_openai_deployment_name", ""),
                 input = input_data,
             )
-
 
         response_text = response.output_text
         
