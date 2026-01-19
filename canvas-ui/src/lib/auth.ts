@@ -11,6 +11,9 @@ if (!keycloak.authServerUrl) {
   keycloak.authServerUrl = import.meta.env.VITE_KEYCLOAK_URL;
 }
 
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Check if user is authenticated via AI Force
 const isAIForceAuthenticated = () => {
   const userInfo = localStorage.getItem("user-info");
@@ -20,7 +23,6 @@ const isAIForceAuthenticated = () => {
   if (userInfo && isLogin === "true" && isUserAuthorized === "true") {
     try {
       const parsedUserInfo = JSON.parse(userInfo);
-      // Check if user has auth_token and user_id
       return !!(parsedUserInfo.auth_token && parsedUserInfo.user_id);
     } catch (e) {
       console.error("Failed to parse user-info from localStorage:", e);
@@ -43,6 +45,56 @@ const setupSessionFromLocalStorage = () => {
       console.error("Failed to setup session from localStorage:", e);
     }
   }
+};
+
+// Validate user with backend and get user details
+const validateUserWithBackend = async (username: string, authToken: string) => {
+  try {
+    const encodedUsername = encodeURIComponent(username);
+    const response = await fetch(
+      `${API_BASE_URL}/api/user/validate?user_id=${encodedUsername}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Backend error: ${response.status} - ${errorBody}`);
+
+      // Improved error handling for user feedback
+      if (response.status === 404) {
+        throw new Error("User not found or invalid. Please contact support.");
+      }
+
+      throw new Error(`User validation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.status === "success" && data.details) {
+      return data.details;
+    } else {
+      throw new Error(data.message || "User validation failed");
+    }
+  } catch (error) {
+    console.error("Error validating user with backend:", error);
+    throw error;
+  }
+};
+
+// Determine redirect URL based on user role
+const getRedirectUrlByRole = (roleTypeName: string): string => {
+  // Check if user is Project Admin
+  if (roleTypeName === "Project Admin") {
+    return "#/admin-configure"; // Redirect to admin dashboard
+  }
+  // Default redirect for regular users
+  return "#/"; // Redirect to Business Canvas
 };
 
 export const initKeycloak = (onAuthenticatedCallback: () => void) => {
@@ -92,77 +144,120 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
       checkLoginIframe: false,
       responseMode: 'fragment',
     })
-    .then((authenticated) => {
+    .then(async (authenticated) => {
       console.log("Keycloak initialized. Authenticated:", authenticated);
       console.log("Token exists:", !!keycloak.token);
       
       if (authenticated && keycloak.token) {
-        sessionStorage.setItem("userId", keycloak.tokenParsed?.preferred_username || "");
-        sessionStorage.setItem("isAuthenticated", JSON.stringify(true));
-        console.log("User authenticated via Keycloak, userId set:", keycloak.tokenParsed?.preferred_username);
-
-        // Store required data in local storage
-        localStorage.setItem("fromLoginBtn", JSON.stringify(true));
-        localStorage.setItem("isLogin", JSON.stringify(true));
-        localStorage.setItem("isUserAuthorized", JSON.stringify(true));
+        const username = keycloak.tokenParsed?.preferred_username || "";
         
-        if (keycloak.refreshToken) {
-          localStorage.setItem("refreshToken", keycloak.refreshToken);
-        } else {
-          console.warn("Refresh token is undefined");
+        sessionStorage.setItem("userId", username);
+        sessionStorage.setItem("isAuthenticated", JSON.stringify(true));
+        console.log("User authenticated via Keycloak, userId set:", username);
+
+        try {
+          // Validate user with backend and get user details
+          console.log("Validating user with backend:", username);
+          const userDetails = await validateUserWithBackend(username, keycloak.token);
+          
+          console.log("User validation successful:", userDetails);
+
+          // Store required data in local storage
+          localStorage.setItem("fromLoginBtn", JSON.stringify(true));
+          localStorage.setItem("isLogin", JSON.stringify(true));
+          localStorage.setItem("isUserAuthorized", JSON.stringify(true));
+          
+          if (keycloak.refreshToken) {
+            localStorage.setItem("refreshToken", keycloak.refreshToken);
+          } else {
+            console.warn("Refresh token is undefined");
+          }
+          
+          localStorage.setItem("keycloak", JSON.stringify(true));
+
+          // Store bottom menu items
+          const bottomMenuItems = JSON.stringify([
+            {
+              id: 10,
+              menu_name: "Logout",
+              description: "User profile related page",
+              title: "Logout",
+              icon_path: "bi bi-person-circle",
+              project_id: null,
+              display_order: 10,
+              display_type_id: 1,
+              route_type: 0,
+              url: "/profile",
+              parent_menu_id: null,
+              permission_type: 2,
+            },
+          ]);
+          localStorage.setItem("bottomMenuItems", bottomMenuItems);
+
+          // Store user info from backend response
+          const userInfo = JSON.stringify({
+            user_id: userDetails.user_id,
+            user_name: userDetails.user_name,
+            role: userDetails.role_type_name,
+            role_id: userDetails.role_id,
+            project_id: userDetails.project_id,
+            org_id: 1, // You might get this from backend too
+            auth_token: keycloak.token,
+            is_super_admin: userDetails.role_type_name === "Super Admin",
+            is_project_admin: userDetails.role_type_name === "Project Admin",
+            email_id: userDetails.email_id,
+            user_type: "platform_user",
+            role_type_id: userDetails.role_id,
+            role_type: userDetails.role_type_name,
+            first_name: userDetails.first_name,
+            last_name: userDetails.last_name,
+            is_active: userDetails.is_active,
+            last_active: userDetails.last_active,
+          });
+          localStorage.setItem("user-info", userInfo);
+
+          // Determine redirect URL based on role
+          const redirectUrl = getRedirectUrlByRole(userDetails.role_type_name);
+          console.log("Redirecting to:", redirectUrl, "based on role:", userDetails.role_type_name);
+          
+          // Clean up OAuth params from URL
+          if (window.location.hash.includes('state=') || window.location.hash.includes('session_state=')) {
+            console.log("Cleaning up OAuth params from URL");
+            window.history.replaceState(null, '', window.location.origin + '/' + redirectUrl);
+          } else {
+            // Set the redirect URL
+            window.location.hash = redirectUrl;
+          }
+          
+          onAuthenticatedCallback();
+
+        } catch (error) {
+          console.error("Backend validation failed:", error);
+          // Clear authentication state on validation failure
+          sessionStorage.clear();
+          localStorage.clear();
+
+          // Show error message to user
+          alert("Failed to validate user with backend. Redirecting to login page...");
+
+          // Redirect to Keycloak login page
+          keycloak.logout();
         }
         
-        localStorage.setItem("keycloak", JSON.stringify(true));
-
-        const bottomMenuItems = JSON.stringify([
-          {
-            id: 10,
-            menu_name: "Logout",
-            description: "User profile related page",
-            title: "Logout",
-            icon_path: "bi bi-person-circle",
-            project_id: null,
-            display_order: 10,
-            display_type_id: 1,
-            route_type: 0,
-            url: "/profile",
-            parent_menu_id: null,
-            permission_type: 2,
-          },
-        ]);
-        localStorage.setItem("bottomMenuItems", bottomMenuItems);
-
-        const userInfo = JSON.stringify({
-          user_id: keycloak.tokenParsed?.sub,
-          user_name: keycloak.tokenParsed?.preferred_username,
-          role: "Super Admin",
-          role_id: 1,
-          project_id: 1,
-          org_id: 1,
-          auth_token: keycloak.token,
-          is_super_admin: true,
-          email_id: keycloak.tokenParsed?.email,
-          user_type: "platform_user",
-          role_type_id: 1,
-          role_type: "Super Admin",
-          first_name: "Super",
-          last_name: "Admin",
-        });
-        localStorage.setItem("user-info", userInfo);
       } else {
         sessionStorage.removeItem("userId");
         sessionStorage.removeItem("isAuthenticated");
         console.log("User not authenticated via Keycloak, userId cleared");
+        
+        // Clean up OAuth params from URL
+        if (window.location.hash.includes('state=') || window.location.hash.includes('session_state=')) {
+          console.log("Cleaning up OAuth params from URL");
+          const targetHash = isPostLogout ? '#/logout' : '#/';
+          window.history.replaceState(null, '', window.location.origin + '/' + targetHash);
+        }
+        
+        onAuthenticatedCallback();
       }
-      
-      // Clean up OAuth params from URL
-      if (window.location.hash.includes('state=') || window.location.hash.includes('session_state=')) {
-        console.log("Cleaning up OAuth params from URL");
-        const targetHash = isPostLogout ? '#/logout' : '#/';
-        window.history.replaceState(null, '', window.location.origin + '/' + targetHash);
-      }
-      
-      onAuthenticatedCallback();
     })
     .catch((error) => {
       console.error("Keycloak init failed:", error);
@@ -173,7 +268,7 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
 export const doLogin = () => {
   console.log("Redirecting to Keycloak login...");
   keycloak.login({
-    redirectUri: `${window.location.origin}/canvas`
+    redirectUri: `${window.location.origin}/`
   });
 };
 
@@ -261,6 +356,32 @@ export const updateToken = (minValidity = 5) => {
   }
   // For AI Force, return a resolved promise (no token refresh needed)
   return Promise.resolve(true);
+};
+
+// Helper function to get user info from localStorage
+export const getUserInfo = () => {
+  const userInfo = localStorage.getItem("user-info");
+  if (userInfo) {
+    try {
+      return JSON.parse(userInfo);
+    } catch (e) {
+      console.error("Failed to parse user-info:", e);
+      return null;
+    }
+  }
+  return null;
+};
+
+// Helper function to check if user is Project Admin
+export const isProjectAdmin = () => {
+  const userInfo = getUserInfo();
+  return userInfo?.is_project_admin === true || userInfo?.role_type === "Project Admin";
+};
+
+// Helper function to check if user is Super Admin
+export const isSuperAdmin = () => {
+  const userInfo = getUserInfo();
+  return userInfo?.is_super_admin === true || userInfo?.role_type === "Super Admin";
 };
 
 export default keycloak;
