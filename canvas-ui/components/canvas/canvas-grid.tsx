@@ -170,8 +170,68 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
 }
  
 function renderValue(value: unknown): React.ReactNode {
-    // Special handling: Render 'Non Functional Requirements' as a bullet list (like Risks)
+    // Special handling: Render 'Risks' as bullet list with bold title and mitigation below
     if (Array.isArray(value) && value.length > 0) {
+      // Risks: array of objects with 'risk' and 'mitigation'
+      if (value.every((risk) => typeof risk === 'object' && risk !== null && 'risk' in risk && 'mitigation' in risk)) {
+        return (
+          <ul className="list-disc pl-5 space-y-4">
+            {value.map((riskObj: any, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">
+                <div className="font-semibold">{riskObj.risk}</div>
+                {riskObj.mitigation && (
+                  <div className="ml-2 text-muted-foreground">{riskObj.mitigation}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      // Key Features: array of objects with 'feature', 'priority', 'description'
+      if (value.every((feat) => typeof feat === 'object' && feat !== null && 'feature' in feat)) {
+        return (
+          <ul className="list-disc pl-5 space-y-4">
+            {value.map((featObj: any, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">
+                <div className="font-semibold">
+                  {featObj.feature}
+                  {featObj.priority && (
+                    <span className="ml-2 font-bold">({featObj.priority})</span>
+                  )}
+                </div>
+                {featObj.description && (
+                  <div className="ml-2 text-muted-foreground">{featObj.description}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      // KPIs: array of objects with 'metric', 'baseline', 'target', 'measurement_frequency'
+      if (value.every((kpi) => typeof kpi === 'object' && kpi !== null && 'metric' in kpi)) {
+        return (
+          <ul className="list-disc pl-5 space-y-2">
+            {value.map((kpiObj: any, idx: number) => {
+              const metric = kpiObj.metric || '';
+              const baseline = kpiObj.baseline ? ` ${kpiObj.baseline}` : '';
+              const target = kpiObj.target || '';
+              const timeframe = kpiObj.timeframe || '';
+              const measurement = kpiObj.measurement_frequency || '';
+              // Compose the line as: Metric ... Baseline X -> Y within Z (Measurement)
+              let line = metric;
+              if (baseline) line += ` ... ${baseline}`;
+              if (target) line += ` -> ${target}`;
+              if (timeframe) line += ` within ${timeframe}`;
+              if (measurement) line += ` (${measurement})`;
+              return (
+                <li key={idx} className="text-sm leading-relaxed">
+                  {line}
+                </li>
+              );
+            })}
+          </ul>
+        );
+      }
       // If all are strings
       if (value.every((nfr) => typeof nfr === 'string')) {
         return (
