@@ -202,7 +202,7 @@ export function DashboardPage(): React.ReactElement {
             )}
             {filteredCanvases.map((canvas) => (
               <div key={canvas.canvas_id} className="block">
-                <Card className="border relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between">
+                <Card className="border relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between group">
                   <div className="absolute top-2 right-2 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -227,9 +227,29 @@ export function DashboardPage(): React.ReactElement {
                     </DropdownMenu>
                   </div>
                   <CardHeader>
-                    <CardTitle className="text-base text-blue-500 pr-8">
-                      {canvas.title || "Untitled Canvas"}
-                    </CardTitle>
+                    <div
+                      className="flex items-center gap-2 cursor-pointer select-none"
+                      onClick={() => {
+                        sessionStorage.setItem("canvasJson", JSON.stringify(canvas));
+                        sessionStorage.setItem("canvasId", canvas.canvas_id);
+                        navigate(`/canvas-preview/${canvas.canvas_id}`);
+                      }}
+                    >
+                      <CardTitle className="text-base text-blue-500 pr-2 group-hover:underline">
+                        {canvas.title || "Untitled Canvas"}
+                      </CardTitle>
+                      {/* Hand icon appears on hover */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 11V7a5 5 0 0110 0v4m-5 4v4m0 0a2 2 0 01-2-2v-2a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
                     <CardDescription className="line-clamp-2">
                       {canvas.problem_statement || "Canvas ID: " + canvas.canvas_id}
                     </CardDescription>
