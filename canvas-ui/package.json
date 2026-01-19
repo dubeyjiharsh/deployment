@@ -36,6 +36,7 @@
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cross-spawn": "^7.0.5",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.22",
     "keycloak-js": "^26.2.2",
@@ -53,6 +54,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tar": "^7.5.3",
     "vaul": "^1.1.2",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
@@ -74,7 +76,5 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "overrides": {
-    "cross-spawn": "7.0.5"
-  }
+  "overrides": {}
 }
