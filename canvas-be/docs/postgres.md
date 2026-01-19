@@ -105,72 +105,72 @@
 2. Create a `canvas` table
     ```POSTGRESQL
     CREATE TABLE IF NOT EXISTS public.canvas (
-      canvas_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      name TEXT NOT NULL,
-      status VARCHAR(50) NOT NULL DEFAULT 'created',
-      assistant_id TEXT,
-      thread_id TEXT UNIQUE,
-      file_ids TEXT[] NOT NULL DEFAULT '{}',
-      conversation_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        canvas_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name TEXT NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'created',
+        assistant_id TEXT,
+        thread_id TEXT UNIQUE,
+        file_ids TEXT[] NOT NULL DEFAULT '{}',
+        conversation_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ```
 3. Create a `canvas_fields` table
     ```POSTGRESQL
     CREATE TABLE IF NOT EXISTS public.canvas_fields (
-      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      canvas_id UUID NOT NULL UNIQUE REFERENCES public.canvas(canvas_id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      description TEXT,
-      problem_statement TEXT,
-      objectives TEXT[] NOT NULL DEFAULT '{}',
-      kpis TEXT[] NOT NULL DEFAULT '{}',
-      success_criteria TEXT[] NOT NULL DEFAULT '{}',
-      key_features TEXT[] NOT NULL DEFAULT '{}',
-      relevant_facts TEXT[] NOT NULL DEFAULT '{}',
-      risks TEXT[] NOT NULL DEFAULT '{}',
-      assumptions TEXT[] NOT NULL DEFAULT '{}',
-      non_functional_requirements JSONB DEFAULT '{}'::jsonb,
-      use_cases TEXT[] NOT NULL DEFAULT '{}',
-      governance JSONB NOT NULL DEFAULT '[]'::jsonb,
-      tags TEXT[] NOT NULL DEFAULT '{}',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        canvas_id UUID NOT NULL UNIQUE REFERENCES public.canvas(canvas_id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        manual_update BOOLEAN NOT NULL DEFAULT FALSE,
+        problem_statement TEXT NOT NULL DEFAULT '',
+        objectives TEXT[] NOT NULL DEFAULT '{}',
+        kpis TEXT[] NOT NULL DEFAULT '{}',
+        success_criteria TEXT[] NOT NULL DEFAULT '{}',
+        key_features TEXT[] NOT NULL DEFAULT '{}',
+        relevant_facts TEXT[] NOT NULL DEFAULT '{}',
+        risks TEXT[] NOT NULL DEFAULT '{}',
+        assumptions TEXT[] NOT NULL DEFAULT '{}',
+        non_functional_requirements JSONB NOT NULL DEFAULT '{}'::jsonb,
+        use_cases TEXT[] NOT NULL DEFAULT '{}',
+        governance JSONB NOT NULL DEFAULT '[]'::jsonb,
+        tags TEXT[] NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ```
 4. Create an `update_timestamp` function
-        ```POSTGRESQL
-        CREATE OR REPLACE FUNCTION public.update_timestamp()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            NEW.updated_at = NOW();
-            RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
-        ```
+    ```POSTGRESQL
+    CREATE OR REPLACE FUNCTION public.update_timestamp()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    ```
 5. Create triggers to update the `updated_at` field on row modification (only if not already present)
-        ```POSTGRESQL
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_timestamp'
-            ) THEN
-                CREATE TRIGGER update_canvas_timestamp
-                BEFORE UPDATE ON public.canvas
-                FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-            END IF;
+    ```POSTGRESQL
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_timestamp'
+        ) THEN
+            CREATE TRIGGER update_canvas_timestamp
+            BEFORE UPDATE ON public.canvas
+            FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+        END IF;
 
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_fields_timestamp'
-            ) THEN
-                CREATE TRIGGER update_canvas_fields_timestamp
-                BEFORE UPDATE ON public.canvas_fields
-                FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-            END IF;
-        END
-        $$;
-        ```
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_fields_timestamp'
+        ) THEN
+            CREATE TRIGGER update_canvas_fields_timestamp
+            BEFORE UPDATE ON public.canvas_fields
+            FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+        END IF;
+    END
+    $$;
+    ```
 7. Verify the table creation
     ``` bash
     \dt
@@ -214,8 +214,8 @@
      id          | uuid                     |           | not null | uuid_generate_v4()
      canvas_id   | uuid                     |           | not null | 
      title       | text                     |           | not null | 
-     description | text                     |           |          | 
-     problem_statement | text                |           |          | 
+     manual_update | boolean                 |           | not null | false
+     problem_statement | text                |           | not null | ''
      objectives  | text[]                   |           | not null | '{}'::text[]
      kpis        | text[]                   |           | not null | '{}'::text[]
      success_criteria | text[]               |           | not null | '{}'::text[]
@@ -223,7 +223,7 @@
      relevant_facts | text[]                 |           | not null | '{}'::text[]
      risks       | text[]                   |           | not null | '{}'::text[]
      assumptions | text[]                   |           | not null | '{}'::text[]
-     non_functional_requirements | jsonb     |           |          | '{}'::jsonb
+     non_functional_requirements | jsonb     |           | not null | '{}'::jsonb
      use_cases   | text[]                   |           | not null | '{}'::text[]
      governance  | jsonb                    |           | not null | '[]'::jsonb
      tags        | text[]                   |           | not null | '{}'::text[]
