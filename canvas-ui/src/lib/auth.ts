@@ -63,14 +63,6 @@ const validateUserWithBackend = async (username: string, authToken: string) => {
     );
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`Backend error: ${response.status} - ${errorBody}`);
-
-      // Improved error handling for user feedback
-      if (response.status === 404) {
-        throw new Error("User not found or invalid. Please contact support.");
-      }
-
       throw new Error(`User validation failed: ${response.status}`);
     }
 
@@ -91,10 +83,10 @@ const validateUserWithBackend = async (username: string, authToken: string) => {
 const getRedirectUrlByRole = (roleTypeName: string): string => {
   // Check if user is Project Admin
   if (roleTypeName === "Project Admin") {
-    return "#/admin-configure"; // Redirect to admin dashboard
+    return "#/admin-configure"; // Redirect to admin configuration
   }
   // Default redirect for regular users
-  return "#/"; // Redirect to Business Canvas
+  return "#/"; // Redirect to Dashboard
 };
 
 export const initKeycloak = (onAuthenticatedCallback: () => void) => {
@@ -236,12 +228,12 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
           // Clear authentication state on validation failure
           sessionStorage.clear();
           localStorage.clear();
-
+          
           // Show error message to user
-          alert("Failed to validate user with backend. Redirecting to login page...");
-
-          // Redirect to Keycloak login page
-          keycloak.logout();
+          alert("Failed to validate user with backend. Please try logging in again.");
+          
+          // Redirect to login or logout page
+          window.location.hash = '#/logout';
         }
         
       } else {
