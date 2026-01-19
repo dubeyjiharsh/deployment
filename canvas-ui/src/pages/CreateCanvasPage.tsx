@@ -324,7 +324,9 @@ export function CreateCanvasPage(): React.ReactElement {
                 <tbody>
                   {files.map((file, idx) => (
                     <tr key={file.name + file.size} className="border-b last:border-b-0">
-                      <td className="py-1">{file.name}</td>
+                      <td className="py-1 max-w-[180px] truncate" title={file.name} style={{maxWidth: '180px'}}>
+                        {file.name.length > 30 ? `${file.name.slice(0, 14)}...${file.name.slice(-12)}` : file.name}
+                      </td>
                       <td className="py-1">{file.type === "application/pdf" ? "PDF" : "DOCX"}</td>
                       <td className="py-1">{(file.size / 1024).toFixed(2)} KB</td>
                       <td className="py-1">
