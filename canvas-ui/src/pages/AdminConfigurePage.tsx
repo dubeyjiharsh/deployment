@@ -77,13 +77,10 @@ export function AdminConfigurePage() {
       const response = await axios.post(
         `${API_BASE_URL}/api/openbao/configure/llm`,
         {
-          // provider: llmProvider,
-          // api_key: llmApiKey,
-          // model: llmModel || undefined,
-          api_version: apiVersion,
-          endpoint: endpoint,
-          api_key: llmApiKey,
-          deployment_name: deploymentName,
+          azure_openai_endpoint: endpoint,
+          azure_openai_api_key: llmApiKey,
+          azure_openai_deployment_name: deploymentName,
+          azure_openai_api_version: apiVersion,
         },
         {
           headers: {
