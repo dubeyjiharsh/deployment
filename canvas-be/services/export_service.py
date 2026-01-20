@@ -44,7 +44,8 @@ class ExportService:
                 "key features",
                 "risks",
                 "non functional requirements",
-                "use cases"
+                "use cases",
+                "governance"  # Add governance to table rendering
             }
         }
 
@@ -97,19 +98,38 @@ class ExportService:
             display_name = FIELD_DISPLAY_NAMES.get(key_clean, key.replace("_", " ").title())
             doc.add_heading(display_name, level=1)
 
-            # TABLE LOGIC (KPIs, Key Features, Risks, NFRs, Use Cases)
+            # Special handling for Governance (list of approvers/reviewers)
+            if key_clean == "governance" and isinstance(value, dict):
+                for gov_type, gov_list in value.items():
+                    if not gov_list:
+                        continue
+                    doc.add_heading(gov_type.title(), level=2)
+                    if isinstance(gov_list, list) and gov_list and isinstance(gov_list[0], dict):
+                        columns = list(gov_list[0].keys())
+                        table = doc.add_table(rows=1, cols=len(columns))
+                        table.style = "Table Grid"
+                        for i, col in enumerate(columns):
+                            table.rows[0].cells[i].text = col.replace("_", " ").title()
+                        for entry in gov_list:
+                            row_cells = table.add_row().cells
+                            for i, col in enumerate(columns):
+                                row_cells[i].text = str(entry.get(col, ""))
+                    else:
+                        for item in gov_list:
+                            doc.add_paragraph(str(item), style="List Bullet")
+                continue
+
+            # TABLE LOGIC (KPIs, Key Features, Risks, NFRs, Use Cases, Governance)
             if key_clean in table_keys and isinstance(value, list):
                 normalized = ExportService._normalize_table_data(value)
-                
                 if normalized and isinstance(normalized[0], dict):
                     columns = list(normalized[0].keys())
                     table = doc.add_table(rows=1, cols=len(columns))
                     table.style = "Table Grid"
-                    
                     # Header row
                     for i, col in enumerate(columns):
                         table.rows[0].cells[i].text = col.replace("_", " ").title()
-                    
+
                     # Data rows
                     for entry in normalized:
                         row_cells = table.add_row().cells
@@ -171,14 +191,42 @@ class ExportService:
             elements.append(Paragraph(display_name, styles["Heading1"]))
             elements.append(Spacer(1, 6))
 
+            # Special handling for Governance (list of approvers/reviewers)
+            if key_clean == "governance" and isinstance(value, dict):
+                for gov_type, gov_list in value.items():
+                    if not gov_list:
+                        continue
+                    elements.append(Paragraph(gov_type.title(), styles["Heading2"]))
+                    if isinstance(gov_list, list) and gov_list and isinstance(gov_list[0], dict):
+                        headers = [h.replace("_", " ").title() for h in gov_list[0].keys()]
+                        data = [headers]
+                        for entry in gov_list:
+                            row = [Paragraph(str(entry.get(k, "")), styles["BodyText"]) for k in gov_list[0].keys()]
+                            data.append(row)
+                        col_widths = [doc.width / len(headers)] * len(headers)
+                        table = Table(data, colWidths=col_widths)
+                        table.setStyle(TableStyle([
+                            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.beige]),
+                        ]))
+                        elements.append(table)
+                    else:
+                        for item in gov_list:
+                            elements.append(Paragraph(f"• {item}", styles["BodyText"]))
+                    elements.append(Spacer(1, 12))
+                continue
+
             # TABLE LOGIC
             if key_clean in table_keys and isinstance(value, list):
                 normalized = ExportService._normalize_table_data(value)
-                
                 if normalized and isinstance(normalized[0], dict):
                     headers = [h.replace("_", " ").title() for h in normalized[0].keys()]
                     data = [headers]
-                    
                     for entry in normalized:
                         row = [Paragraph(str(entry.get(k, "")), styles["BodyText"]) for k in normalized[0].keys()]
                         data.append(row)
