@@ -6,6 +6,7 @@ import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
 import { MarkdownContent } from "./MarkdownContent";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 function toMarkdownString(content: unknown): string {
   if (typeof content === "string") return content;
 
@@ -182,7 +183,7 @@ export function CreateCanvasPage(): React.ReactElement {
       setShowPreviewAlert(false);
     }
     if (value.length < 10) {
-      setIdeaError("Please enter at least 10 characters before sending.");
+      setIdeaError("minimum 10 characters are required");
     } else {
       setIdeaError(null);
     }
@@ -190,7 +191,7 @@ export function CreateCanvasPage(): React.ReactElement {
  
   const handleSubmit = async () => {
     if (!idea || idea.length < 10 || !canvasId) {
-      setIdeaError("Please enter at least 10 characters.");
+      setIdeaError("minimum 10 characters are required");
       return;
     }
     const userMsg = { role: "user", content: idea };
@@ -355,8 +356,8 @@ export function CreateCanvasPage(): React.ReactElement {
               </table>
             </div>
           )}
-          <div className="flex items-start w-full gap-2">
-            <div className="flex-1 min-w-0 relative">
+          <div className="flex items-start w-full gap-2 relative">
+            <div className="flex-1 min-w-0">
               <Textarea
                 value={idea}
                 onChange={(e) => {
@@ -369,8 +370,7 @@ export function CreateCanvasPage(): React.ReactElement {
                 minLength={10}
                 aria-invalid={!!ideaError}
               />
-              {/* All three buttons in a row, right-aligned */}
-              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
+              <div className="flex flex-row items-center gap-2 absolute top-1/2 right-3 -translate-y-1/2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
@@ -410,15 +410,22 @@ export function CreateCanvasPage(): React.ReactElement {
                 </div>
               </div>
             </div>
-            {/* Preview button outside the input box */}
-            <button
-              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-              onClick={handlePreview}
-              disabled={chat.length === 0}
-              aria-disabled={chat.length === 0}
-            >
-              <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1 absolute right-0 top-1/2 -translate-y-1/2"
+                  style={{ right: '-60px' }}
+                  onClick={handlePreview}
+                  disabled={chat.length === 0 || isLoading}
+                  aria-disabled={chat.length === 0 || isLoading}
+                >
+                  <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                View the generated Business Canvas
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
