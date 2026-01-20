@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.canvas (
   canvas_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),        -- Unique identifier for each canvas
   name TEXT NOT NULL,                                           -- Name of the canvas
-  status VARCHAR(50) NOT NULL DEFAULT 'draft',                  -- Status of the canvas (e.g., draft, completed)
+  status VARCHAR(50) NOT NULL DEFAULT 'created',                -- Status of the canvas (e.g., draft, completed)
   assistant_id TEXT,                                            -- Identifier for the Azure assistant associated with the canvas
   thread_id TEXT UNIQUE,                                        -- Unique Azure thread identifier for conversation
   file_ids TEXT[] NOT NULL DEFAULT '{}',                        -- Array of associated file identifiers uploaded in Azure thread for this canvas
@@ -23,16 +23,16 @@ CREATE TABLE IF NOT EXISTS public.canvas_fields (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),               -- Unique identifier for each record
   canvas_id UUID NOT NULL UNIQUE REFERENCES public.canvas(canvas_id) ON DELETE CASCADE, -- Foreign key referencing canvas table
   title TEXT NOT NULL,                                          -- Title of the canvas
-  description TEXT,                                             -- Description of the canvas
-  problem_statement TEXT,                                       -- Problem statement for the canvas
+  manual_update BOOLEAN NOT NULL DEFAULT FALSE,                 -- Indicates if the canvas was manually updated
+  problem_statement TEXT NOT NULL DEFAULT '',                   -- Problem statement for the canvas
   objectives TEXT[] NOT NULL DEFAULT '{}',                      -- Array of objectives for the canvas
   kpis TEXT[] NOT NULL DEFAULT '{}',                            -- Array of key performance indicators
-  success_criteria JSONB NOT NULL DEFAULT '{}'::jsonb,          -- Success criteria stored as JSON
+  success_criteria TEXT[] NOT NULL DEFAULT '{}',                -- Success criteria array
   key_features TEXT[] NOT NULL DEFAULT '{}',                    -- Array of key features
-  relevant_facts TEXT,                                          -- Relevant facts for the canvas
+  relevant_facts TEXT[] NOT NULL DEFAULT '{}',                  -- Relevant facts for the canvas
   risks TEXT[] NOT NULL DEFAULT '{}',                           -- Array of identified risks
   assumptions TEXT[] NOT NULL DEFAULT '{}',                     -- Array of assumptions made
-  non_functional_requirements TEXT,                             -- Non-functional requirements
+  non_functional_requirements JSONB NOT NULL DEFAULT '{}'::jsonb,-- Non-functional requirements
   use_cases TEXT[] NOT NULL DEFAULT '{}',                       -- Array of use cases
   governance JSONB NOT NULL DEFAULT '[]'::jsonb,                -- Governance details stored as JSON array
   tags TEXT[] NOT NULL DEFAULT '{}',                            -- Array of tags associated with the canvas

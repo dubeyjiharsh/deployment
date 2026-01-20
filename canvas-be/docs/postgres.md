@@ -104,43 +104,44 @@
     psql -U postgres -d gap_canvas_db
 2. Create a `canvas` table
     ```POSTGRESQL
-    CREATE TABLE canvas (
+    CREATE TABLE IF NOT EXISTS public.canvas (
         canvas_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name TEXT NOT NULL,
-        status VARCHAR(50) NOT NULL DEFAULT 'draft',
+        status VARCHAR(50) NOT NULL DEFAULT 'created',
         assistant_id TEXT,
         thread_id TEXT UNIQUE,
         file_ids TEXT[] NOT NULL DEFAULT '{}',
         conversation_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ```
 3. Create a `canvas_fields` table
-    ``` POSTGRESQL
-    CREATE TABLE canvas_fields (
+    ```POSTGRESQL
+    CREATE TABLE IF NOT EXISTS public.canvas_fields (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        canvas_id UUID NOT NULL UNIQUE REFERENCES canvas(canvas_id) ON DELETE CASCADE,
+        canvas_id UUID NOT NULL UNIQUE REFERENCES public.canvas(canvas_id) ON DELETE CASCADE,
         title TEXT NOT NULL,
-        problem_statement TEXT,
+        manual_update BOOLEAN NOT NULL DEFAULT FALSE,
+        problem_statement TEXT NOT NULL DEFAULT '',
         objectives TEXT[] NOT NULL DEFAULT '{}',
         kpis TEXT[] NOT NULL DEFAULT '{}',
-        success_criteria JSONB NOT NULL DEFAULT '{}'::jsonb,
+        success_criteria TEXT[] NOT NULL DEFAULT '{}',
         key_features TEXT[] NOT NULL DEFAULT '{}',
-        relevant_facts TEXT,
+        relevant_facts TEXT[] NOT NULL DEFAULT '{}',
         risks TEXT[] NOT NULL DEFAULT '{}',
         assumptions TEXT[] NOT NULL DEFAULT '{}',
-        non_functional_requirements TEXT,
+        non_functional_requirements JSONB NOT NULL DEFAULT '{}'::jsonb,
         use_cases TEXT[] NOT NULL DEFAULT '{}',
         governance JSONB NOT NULL DEFAULT '[]'::jsonb,
         tags TEXT[] NOT NULL DEFAULT '{}',
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ```
 4. Create an `update_timestamp` function
-    ``` POSTGRESQL
-    CREATE OR REPLACE FUNCTION update_timestamp()
+    ```POSTGRESQL
+    CREATE OR REPLACE FUNCTION public.update_timestamp()
     RETURNS TRIGGER AS $$
     BEGIN
         NEW.updated_at = NOW();
@@ -148,17 +149,27 @@
     END;
     $$ LANGUAGE plpgsql;
     ```
-5. Create triggers to update the `update_canvas_timestamp` field on row modification
-    ``` POSTGRESQL
-    CREATE TRIGGER update_canvas_timestamp
-    BEFORE UPDATE ON canvas
-    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-    ```
-6. Create triggers to update the `update_canvas_fields_timestamp` field on row modification
-    ``` POSTGRESQL
-    CREATE TRIGGER update_canvas_fields_timestamp
-    BEFORE UPDATE ON canvas_fields
-    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+5. Create triggers to update the `updated_at` field on row modification (only if not already present)
+    ```POSTGRESQL
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_timestamp'
+        ) THEN
+            CREATE TRIGGER update_canvas_timestamp
+            BEFORE UPDATE ON public.canvas
+            FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = 'update_canvas_fields_timestamp'
+        ) THEN
+            CREATE TRIGGER update_canvas_fields_timestamp
+            BEFORE UPDATE ON public.canvas_fields
+            FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+        END IF;
+    END
+    $$;
     ```
 7. Verify the table creation
     ``` bash
@@ -175,26 +186,52 @@
     ```
 
 8. Check table schema
-    ``` bash
+    ```bash
     \d+ canvas
+    \d+ canvas_fields
     ```
-    Output:
-    ``` text
-                                        Table "public.canvas"
-     Column      |           Type           | Collation | Nullable |               Default                | Storage  | Stats target | Description 
-    --------------+--------------------------+-----------+----------+-------------------------------------+----------+--------------+-------------
-     canvas_id    | uuid                     |           | not null | uuid_generate_v4()                  | plain    |              | 
-     name         | text                     |           | not null |                                     | extended |              | 
-     status       | character varying(50)    |           | not null | 'draft'::character varying          | extended |              | 
-     assistant_id | text                     |           |          |                                     | extended |              | 
-     thread_id    | text                     |           |          |                                     | extended |              | 
-     file_ids     | text[]                   |           | not null | '{}'::text[]                        | extended |              | 
-     conversation_metadata | jsonb            |           | not null | '{}'::jsonb                         | extended |              | 
-     created_at   | timestamp with time zone |           | not null | now()                               | plain    |              | 
-     updated_at   | timestamp with time zone |           | not null | now()                               | plain    |              | 
+    Output (example):
+    ```text
+    Table "public.canvas"
+     Column      |           Type           | Collation | Nullable |               Default                
+    --------------+--------------------------+-----------+----------+-------------------------------------
+     canvas_id    | uuid                     |           | not null | uuid_generate_v4()
+     name         | text                     |           | not null | 
+     status       | character varying(50)    |           | not null | 'created'::character varying
+     assistant_id | text                     |           |          | 
+     thread_id    | text                     |           |          | 
+     file_ids     | text[]                   |           | not null | '{}'::text[]
+     conversation_metadata | jsonb            |           | not null | '{}'::jsonb
+     created_at   | timestamp with time zone |           | not null | now()
+     updated_at   | timestamp with time zone |           | not null | now()
     Indexes:
         "canvas_pkey" PRIMARY KEY, btree (canvas_id)
         "canvas_thread_id_key" UNIQUE CONSTRAINT, btree (thread_id)
+
+    Table "public.canvas_fields"
+     Column      |           Type           | Collation | Nullable |               Default                
+    --------------+--------------------------+-----------+----------+-------------------------------------
+     id          | uuid                     |           | not null | uuid_generate_v4()
+     canvas_id   | uuid                     |           | not null | 
+     title       | text                     |           | not null | 
+     manual_update | boolean                 |           | not null | false
+     problem_statement | text                |           | not null | ''
+     objectives  | text[]                   |           | not null | '{}'::text[]
+     kpis        | text[]                   |           | not null | '{}'::text[]
+     success_criteria | text[]               |           | not null | '{}'::text[]
+     key_features | text[]                  |           | not null | '{}'::text[]
+     relevant_facts | text[]                 |           | not null | '{}'::text[]
+     risks       | text[]                   |           | not null | '{}'::text[]
+     assumptions | text[]                   |           | not null | '{}'::text[]
+     non_functional_requirements | jsonb     |           | not null | '{}'::jsonb
+     use_cases   | text[]                   |           | not null | '{}'::text[]
+     governance  | jsonb                    |           | not null | '[]'::jsonb
+     tags        | text[]                   |           | not null | '{}'::text[]
+     created_at  | timestamp with time zone |           | not null | now()
+     updated_at  | timestamp with time zone |           | not null | now()
+    Indexes:
+        "canvas_fields_pkey" PRIMARY KEY, btree (id)
+        "canvas_fields_canvas_id_key" UNIQUE CONSTRAINT, btree (canvas_id)
     ```
 9. Exit the PostgreSQL prompt
     ``` bash

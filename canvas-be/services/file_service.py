@@ -4,19 +4,35 @@ import aiofiles
 from typing import List
 from docx import Document
 from fastapi import UploadFile
-from openai import AzureOpenAI
+from openai import OpenAI
 from config import settings
 
 class FileService:
     """Service for handling file uploads and management"""
     
-    def __init__(self):
-        self.client = AzureOpenAI(
-            api_version=settings.AZURE_OPENAI_API_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-            api_key=settings.AZURE_OPENAI_API_KEY
+    _client = None
+    _last_config = None
+
+    @classmethod
+    def reload_client(cls):
+        azure_config = settings.get_azure_openai_config()
+        cls._client = OpenAI(
+            base_url=azure_config.get("azure_openai_endpoint", "")+"openai/v1/",
+            api_key=azure_config.get("azure_openai_api_key", ""),
         )
+        cls._last_config = azure_config
+
+    def __init__(self):
+        if not self.__class__._client:
+            self.__class__.reload_client()
+        self.azure_config = self.__class__._last_config
         self._ensure_upload_dir()
+
+    @property
+    def client(self):
+        if not self.__class__._client:
+            self.__class__.reload_client()
+        return self.__class__._client
     
     def _ensure_upload_dir(self):
         """Ensure upload directory exists"""

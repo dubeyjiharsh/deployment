@@ -1,5 +1,5 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, Field, RootModel
 from datetime import datetime
  
 # Request Models
@@ -99,3 +99,25 @@ class ErrorResponse(BaseModel):
     """Error response model"""
     error: str
     detail: Optional[str] = None
+
+# Openbao Config Models
+class OpenBAOAzureLLMConfig(BaseModel):
+    """Model for Azure OpenAI configuration stored in OpenBAO"""
+    azure_openai_endpoint: str
+    azure_openai_api_key: str
+    azure_openai_deployment_name: str
+    azure_openai_api_version: str
+
+class OpenBAOGeminiLLMConfig(BaseModel):
+    """Model for Gemini configuration stored in OpenBAO"""
+    gemini_endpoint: str
+    gemini_api_key: str
+    gemini_model_name: str
+
+class OpenBAOAIForceLLMConfig(RootModel):
+    """Model for AI Force configuration stored in OpenBAO"""
+    root: Union[OpenBAOAzureLLMConfig, OpenBAOGeminiLLMConfig]
+
+class OpenBAOAIForceBearerTokenConfig(BaseModel):
+    """Model for AI Force bearer token configuration stored in OpenBAO"""
+    bearer_token: str
