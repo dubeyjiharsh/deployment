@@ -362,12 +362,12 @@ export function CreateCanvasPage(): React.ReactElement {
                 onChange={(e) => {
                   if (e.target.value.length <= 1000) setIdea(e.target.value);
                 }}
-                maxLength={1000}
+                // maxLength removed to allow unlimited input
                 placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-36"
+                className="bg-white h-20 w-full pr-24"
                 disabled={isLoading}
-                minLength={10}
-                aria-invalid={!!ideaError}
+                // minLength={10}
+                // aria-invalid={!!ideaError}
               />
               {/* All three buttons in a row, right-aligned */}
               <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
@@ -405,9 +405,9 @@ export function CreateCanvasPage(): React.ReactElement {
                 <div className="text-red-500 text-xs mt-1">{ideaError}</div>
               )}
               <div className="flex justify-end">
-                <div className="text-xs text-gray-400 select-none mt-1 text-right">
+                {/* <div className="text-xs text-gray-400 select-none mt-1 text-right">
                   {idea.length}/1000
-                </div>
+                </div> */}
               </div>
             </div>
             {/* Preview button outside the input box */}
