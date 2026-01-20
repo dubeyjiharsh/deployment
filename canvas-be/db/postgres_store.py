@@ -308,13 +308,13 @@ class PostgresStore:
                 "problem_statement": canvas_data.get("Problem Statement"),
                 "objectives": to_array(canvas_data.get("Objectives")),
                 "kpis": dict_list_to_text_array(canvas_data.get("KPIs")),
-                "success_criteria": to_jsonb(canvas_data.get("Success Criteria")),
+                "success_criteria": to_array(canvas_data.get("Success Criteria")),
                 "key_features": dict_list_to_text_array(canvas_data.get("Key Features")),
                 "relevant_facts": to_array(canvas_data.get("Relevant Facts", [])),
                 "risks": dict_list_to_text_array(canvas_data.get("Risks")),
                 "assumptions": to_array(canvas_data.get("Assumptions")),
                 # Convert Non Functional Requirements dict to flat list of strings for TEXT[] column
-                "non_functional_requirements": flatten_nfr(canvas_data.get("Non Functional Requirements")),
+                "non_functional_requirements": to_jsonb(canvas_data.get("Non Functional Requirements")),
                 "use_cases": dict_list_to_text_array(canvas_data.get("Use Cases")),
                 "governance": to_jsonb(canvas_data.get("Governance", [])),
                 "tags": to_array(canvas_data.get("Tags", []))
