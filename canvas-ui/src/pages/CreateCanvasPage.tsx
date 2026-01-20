@@ -360,10 +360,7 @@ export function CreateCanvasPage(): React.ReactElement {
             <div className="flex-1 min-w-0">
               <Textarea
                 value={idea}
-                onChange={(e) => {
-                  if (e.target.value.length <= 1000) setIdea(e.target.value);
-                }}
-                maxLength={1000}
+                onChange={(e) => setIdea(e.target.value)}
                 placeholder="Type your message..."
                 className="bg-white h-20 w-full pr-36"
                 disabled={isLoading}
@@ -404,11 +401,7 @@ export function CreateCanvasPage(): React.ReactElement {
               {ideaError && (
                 <div className="text-red-500 text-xs mt-1">{ideaError}</div>
               )}
-              <div className="flex justify-end">
-                <div className="text-xs text-gray-400 select-none mt-1 text-right">
-                  {idea.length}/1000
-                </div>
-              </div>
+                {/* Character count removed as there is no limit */}
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
