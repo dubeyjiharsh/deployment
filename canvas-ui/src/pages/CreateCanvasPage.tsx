@@ -74,10 +74,17 @@ export function CreateCanvasPage(): React.ReactElement {
           
           const history = response.data.history;
           if (Array.isArray(history)) {
-            const mapped = history.map((m: any) => ({
-              role: m.role || "assistant",
-              content: toMarkdownString(m.content),
-            }));
+            const mapped = history.map((m: any) => {
+              let content = toMarkdownString(m.content);
+              // Add "Click Here" link to preview page if not already present
+              if (typeof canvasId === "string" && content) {
+                content += `\n\n[Click Here](/canvas-preview/${encodeURIComponent(canvasId)})`;
+              }
+              return {
+                role: m.role || "assistant",
+                content,
+              };
+            });
             setChat(mapped);
             sessionStorage.setItem("chatState", JSON.stringify(mapped));
           }
@@ -299,7 +306,20 @@ export function CreateCanvasPage(): React.ReactElement {
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
                   {msg.role === 'assistant' ? (
-                    <MarkdownContent content={msg.content} />
+                    <>
+                      <MarkdownContent content={msg.content} />
+                      {canvasId && (
+                        <div className="mt-2 text-xs">
+                            <button
+                              type="button"
+                              className="text-blue-600 underline hover:text-blue-800 cursor-pointer bg-transparent border-none p-0"
+                              onClick={() => navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`)}
+                            >
+                              Click Here to preview this canvas
+                            </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     msg.content
                   )}
