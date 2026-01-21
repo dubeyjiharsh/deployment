@@ -95,6 +95,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# test files
+sample.json
+
 # Spyder project settings
 .spyderproject
 .spyproject

@@ -28,6 +28,8 @@ def validate_user(user_id: str):
 		response = requests.get("https://aiforce.hcltech.com/pms/users/list_user", params=payload, headers=headers)
 		if response.status_code == 403:
 			raise HTTPException(status_code=403, detail="Invalid token")
+		elif response.status_code == 401:
+			raise HTTPException(status_code=401, detail="Expired token")
 		elif response.status_code != 200:
 			raise HTTPException(status_code=response.status_code, detail="Failed to validate user")
 		
