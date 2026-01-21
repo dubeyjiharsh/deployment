@@ -89,7 +89,7 @@ async def send_message(
 
                 # validate with pydantic model CanvasFieldList
                 try:
-                    current_canvas_json=CanvasFieldList.model_validate(current_canvas_json).model_dump()
+                    current_canvas_json=CanvasFieldList.model_validate(current_canvas_json).model_dump(by_alias=True, exclude_unset=True)
 
                     # drop governance and relevant facts fields before sending to LLM
                     current_canvas_json.pop("governance", None)
@@ -107,10 +107,12 @@ async def send_message(
             current_canvas_json=current_canvas_json
         )
 
-        # Validate canvas structure
-        is_valid, errors = validate_canvas_structure(canvas_json)
-        if not is_valid:
-            logging.warning(f"Canvas validation errors: {errors}")
+        # Validate canvas structure using pydantic model
+        try:
+            canvas_json = CanvasFieldList.model_validate(canvas_json).model_dump(by_alias=True, exclude_unset=True)
+        except Exception as e:
+            logging.warning(f"Canvas JSON validation failed: {str(e)}")
+            raise ValueError(f"Canvas JSON validation failed: {str(e)}")
 
         # Save canvas fields to database
         try:
@@ -125,16 +127,16 @@ async def send_message(
         except Exception as e:
             logging.warning(f"Failed to save canvas fields: {str(e)}")
             # Continue execution - we still want to return the response
+        finally:
+            # Get updated conversation history
+            updated_history = responses_service.get_conversation_history(canvas["thread_id"])
 
-        # Get updated conversation history
-        updated_history = responses_service.get_conversation_history(canvas["thread_id"])
-
-        return MessageResponse(
-            canvas_id=canvas_id,
-            chat_response=chat_response,
-            canvas_json=canvas_json,
-            conversation_history=updated_history
-        )
+            return MessageResponse(
+                canvas_id=canvas_id,
+                chat_response=chat_response,
+                canvas_json=canvas_json,
+                conversation_history=updated_history
+            )
     
     except HTTPException:
         raise
