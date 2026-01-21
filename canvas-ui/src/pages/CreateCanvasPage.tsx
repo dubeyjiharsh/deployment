@@ -6,6 +6,7 @@ import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
 import { MarkdownContent } from "./MarkdownContent";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 function toMarkdownString(content: unknown): string {
   if (typeof content === "string") return content;
 
@@ -53,7 +54,6 @@ export function CreateCanvasPage(): React.ReactElement {
   React.useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-
     const initPage = async () => {
       const isReturning = sessionStorage.getItem("isReturningFromPreview") === "true";
       const isEditing = sessionStorage.getItem("isEditingCanvas") === "true";
@@ -182,7 +182,7 @@ export function CreateCanvasPage(): React.ReactElement {
       setShowPreviewAlert(false);
     }
     if (value.length < 10) {
-      setIdeaError("Please enter at least 10 characters before sending.");
+      setIdeaError("minimum 10 characters are required");
     } else {
       setIdeaError(null);
     }
@@ -190,7 +190,7 @@ export function CreateCanvasPage(): React.ReactElement {
  
   const handleSubmit = async () => {
     if (!idea || idea.length < 10 || !canvasId) {
-      setIdeaError("Please enter at least 10 characters.");
+      setIdeaError("minimum 10 characters are required");
       return;
     }
     const userMsg = { role: "user", content: idea };
@@ -337,7 +337,9 @@ export function CreateCanvasPage(): React.ReactElement {
                   {files.map((file, idx) => (
                     <tr key={file.name + file.size} className="border-b last:border-b-0">
                       <td className="py-1 max-w-[180px] truncate" title={file.name} style={{maxWidth: '180px'}}>
-                        {file.name.length > 30 ? `${file.name.slice(0, 14)}...${file.name.slice(-12)}` : file.name}
+                        {file.name.length > 20
+                          ? `${file.name.slice(0, 15)}...`
+                          : file.name}
                       </td>
                       <td className="py-1">{file.type === "application/pdf" ? "PDF" : "DOCX"}</td>
                       <td className="py-1">{(file.size / 1024).toFixed(2)} KB</td>
@@ -355,26 +357,29 @@ export function CreateCanvasPage(): React.ReactElement {
               </table>
             </div>
           )}
-          <div className="flex items-start w-full gap-2">
-            <div className="flex-1 min-w-0 relative">
-              <Textarea
-                value={idea}
-                onChange={(e) => {
-                  if (e.target.value.length <= 1000) setIdea(e.target.value);
-                }}
-                // maxLength removed to allow unlimited input
-                placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-24"
-                disabled={isLoading}
-                // minLength={10}
-                // aria-invalid={!!ideaError}
-              />
-              {/* All three buttons in a row, right-aligned */}
-              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
+          <div className="flex items-start w-full gap-2 relative">
+            <div className="flex-1 min-w-0">
+              <Tooltip open={idea.length > 0 && idea.length < 10}>
+                <TooltipTrigger asChild>
+                  <Textarea
+                    value={idea}
+                    onChange={(e) => setIdea(e.target.value)}
+                    placeholder="Type your message..."
+                    className="bg-white h-20 w-full pr-25 border border-gray-300 focus:border-red-500 focus:ring-red-500"
+                    disabled={isLoading}
+                    aria-invalid={!!ideaError}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-red-600 text-white">
+                  minimum 10 characters are required
+                </TooltipContent>
+              </Tooltip>
+              <div className="flex flex-row items-center gap-2 absolute top-1/2 right-3 -translate-y-1/2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
                   aria-label="Attach file"
+                  //style={{ marginRight: '8px' }}
                 >
                   <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -385,6 +390,7 @@ export function CreateCanvasPage(): React.ReactElement {
                   onClick={handleSubmit}
                   disabled={isLoading || !idea || idea.length < 10}
                   aria-disabled={isLoading || !idea || idea.length < 10}
+                  style={{ marginRight: '8px' }}
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -404,21 +410,24 @@ export function CreateCanvasPage(): React.ReactElement {
               {ideaError && (
                 <div className="text-red-500 text-xs mt-1">{ideaError}</div>
               )}
-              <div className="flex justify-end">
-                {/* <div className="text-xs text-gray-400 select-none mt-1 text-right">
-                  {idea.length}/1000
-                </div> */}
-              </div>
+                {/* Character count removed as there is no limit */}
             </div>
-            {/* Preview button outside the input box */}
-            <button
-              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-              onClick={handlePreview}
-              disabled={chat.length === 0}
-              aria-disabled={chat.length === 0}
-            >
-              <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1 absolute right-0 top-1/2 -translate-y-1/2"
+                  style={{ right: '-60px' }}
+                  onClick={handlePreview}
+                  disabled={chat.length === 0 || isLoading}
+                  aria-disabled={chat.length === 0 || isLoading}
+                >
+                  <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                View the generated Business Canvas
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

@@ -138,8 +138,8 @@ export const USE_CASE_FIELD_LABELS = {
 // ============================================================================
 
 export const governancePersonSchema = z.object({
-  role: z.string(),
   name: z.string(),
+  role: z.string(),
   function: z.string(),
 });
 
@@ -148,21 +148,21 @@ export type GovernancePersonValue = z.infer<typeof governancePersonSchema>;
 export const governanceSchema = z.object({
   approvers: z.array(governancePersonSchema).default([]),
   reviewers: z.array(governancePersonSchema).default([]),
-  requirementLeads: z.array(governancePersonSchema).default([]),
+  // requirementLeads: z.array(governancePersonSchema).default([]),
 });
 
 export type GovernanceValue = z.infer<typeof governanceSchema>;
 
 export const GOVERNANCE_PERSON_FIELD_LABELS = {
-  role: "Role",
   name: "Name",
+  role: "Role",
   function: "Function",
 } as const;
 
 export const GOVERNANCE_CATEGORY_LABELS = {
   approvers: "Sign-off Approvers",
   reviewers: "Reviewers",
-  requirementLeads: "Requirement Leads",
+  // requirementLeads: "Requirement Leads",
 } as const;
 
 // ============================================================================
@@ -234,7 +234,8 @@ export function getStructuredFieldConfig(fieldKey: string): StructuredFieldConfi
       return {
         type: "governance",
         schema: governanceSchema,
-        emptyValue: { approvers: [], reviewers: [], requirementLeads: [] },
+        // emptyValue: { approvers: [], reviewers: [], requirementLeads: [] },
+        emptyValue: { approvers: [], reviewers: []},
       };
 
     default:
