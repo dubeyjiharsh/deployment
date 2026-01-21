@@ -242,19 +242,51 @@ function renderValue(value: unknown): React.ReactNode {
           </ul>
         );
       }
-      // If all are objects with requirement/category/rationale
-      if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr)) {
+      // NFR: array of objects with category and requirement, or object with category keys
+      if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr && 'category' in nfr)) {
+        // Group by category
+        const grouped: Record<string, string[]> = {};
+        value.forEach((nfr: any) => {
+          const cat = nfr.category || 'General';
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(nfr.requirement);
+        });
         return (
-          <ul className="list-disc pl-5 space-y-1">
-            {value.map((nfr: any, idx: number) => (
-              <li key={idx} className="text-sm leading-relaxed">
-                <strong>{nfr.category ? `${nfr.category}: ` : ""}</strong>
-                {nfr.requirement}
-                {nfr.rationale ? <span> <em>({nfr.rationale})</em></span> : null}
-              </li>
+          <div className="space-y-4">
+            {Object.entries(grouped).map(([cat, points]) => (
+              <div key={cat}>
+                <div className="font-semibold mb-1">{cat}</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {points.map((pt, idx) => (
+                    <li key={idx} className="text-sm leading-relaxed">{pt}</li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         );
+      }
+      // NFR: object with category keys, each containing array of points
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const categories = Object.entries(value).filter(([cat, arr]) => Array.isArray(arr) && arr.length > 0);
+        if (categories.length > 0) {
+          return (
+            <div className="space-y-4">
+              {categories.map(([cat, arr]) => (
+                <div key={cat}>
+                  <div className="font-semibold mb-1">{cat.replace(/:/,"")}</div>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {(arr as string[])
+                      .flatMap((pt) => pt.split(/\s*,\s*/).filter(Boolean))
+                      .map((pt, idx) => (
+                        <li key={idx} className="text-sm leading-relaxed">{pt}</li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          );
+        }
       }
     }
   if (value === null || value === undefined || value === "") {

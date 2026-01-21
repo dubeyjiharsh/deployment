@@ -50,7 +50,7 @@ function normalizeGovernance(value: unknown): GovernanceValue {
   return { approvers: [], reviewers: [], requirementLeads: [] };
 }
  
-// Helper functions from CanvasPreviewPage
+// Helper function from CanvasPreviewPage
 function parseJsonIfString(v: unknown) {
   if (typeof v === "string") {
     try {
@@ -183,15 +183,15 @@ function normalizeGovPerson(p: unknown): GovernancePersonValue {
     const person = p as Record<string, unknown>;
     return {
       role: String(person.role || ""),
-      responsibility: String(person.responsibility || ""),
-      authority: String(person.authority || ""),
+      name: String(person.name || ""),
+      function: String(person.function || ""),
     };
   }
-  return { role: "", responsibility: "", authority: "" };
+  return { role: "", name: "", function: "" };
 }
  
 function createEmptyPerson(): GovernancePersonValue {
-  return { role: "", responsibility: "", authority: "" };
+  return { role: "", name: "", function: "" };
 }
  
 export function GovernanceEditor({
@@ -505,27 +505,27 @@ function GovernancePersonCard({
           </div>
  
           <div className="space-y-1.5">
-            <Label htmlFor={`responsibility-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.responsibility}
+            <Label htmlFor={`name-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.name}
             </Label>
             <Textarea
-              id={`responsibility-${index}`}
-              value={person.responsibility}
-              onChange={(e) => onChange({ responsibility: e.target.value })}
-              placeholder="What they oversee..."
+              id={`name-${index}`}
+              value={person.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="No Names yet. Add one below"
               className="min-h-[50px] resize-none text-sm"
             />
           </div>
  
           <div className="space-y-1.5">
-            <Label htmlFor={`authority-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.authority}
+            <Label htmlFor={`function-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.function}
             </Label>
             <Textarea
-              id={`authority-${index}`}
-              value={person.authority}
-              onChange={(e) => onChange({ authority: e.target.value })}
-              placeholder="What they have final say on..."
+              id={`function-${index}`}
+              value={person.function}
+              onChange={(e) => onChange({ function: e.target.value })}
+              placeholder="No Functions yet. Add one below"
               className="min-h-[50px] resize-none text-sm"
             />
           </div>

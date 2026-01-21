@@ -139,8 +139,8 @@ export const USE_CASE_FIELD_LABELS = {
 
 export const governancePersonSchema = z.object({
   role: z.string(),
-  responsibility: z.string(),
-  authority: z.string(),
+  name: z.string(),
+  function: z.string(),
 });
 
 export type GovernancePersonValue = z.infer<typeof governancePersonSchema>;
@@ -155,8 +155,8 @@ export type GovernanceValue = z.infer<typeof governanceSchema>;
 
 export const GOVERNANCE_PERSON_FIELD_LABELS = {
   role: "Role",
-  responsibility: "Responsibility",
-  authority: "Authority",
+  name: "Name",
+  function: "Function",
 } as const;
 
 export const GOVERNANCE_CATEGORY_LABELS = {
