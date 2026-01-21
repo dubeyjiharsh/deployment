@@ -268,6 +268,15 @@ class PostgresStore:
         
         try:
             # Helper functions for type conversion
+            def text_array_to_dict_list(val):
+                """Convert text[] as readable JSON strings or summaries to list of dicts."""
+                if isinstance(val, list):
+                    result = []
+                    for item in val:
+                        result.append(json.loads(item))
+                    return result
+                return []
+
             def to_array(val):
                 """Convert value to PostgreSQL array format (text[])."""
                 if isinstance(val, list):
@@ -305,17 +314,17 @@ class PostgresStore:
             fields = {
                 "canvas_id": canvas_id,
                 "title": canvas_data.get("Title", "Untitled"),
-                "problem_statement": canvas_data.get("Problem Statement"),
+                "problem_statement": canvas_data.get("Problem Statement", canvas_data.get("Problem_Statement", "Undefined")),
                 "objectives": to_array(canvas_data.get("Objectives")),
                 "kpis": dict_list_to_text_array(canvas_data.get("KPIs")),
-                "success_criteria": to_array(canvas_data.get("Success Criteria")),
-                "key_features": dict_list_to_text_array(canvas_data.get("Key Features")),
-                "relevant_facts": to_array(canvas_data.get("Relevant Facts", [])),
+                "success_criteria": to_array(canvas_data.get("Success Criteria", canvas_data.get("Success_Criteria",[]))),
+                "key_features": dict_list_to_text_array(canvas_data.get("Key Features", canvas_data.get("Key_Features",[]))),
+                "relevant_facts": to_array(canvas_data.get("Relevant Facts", canvas_data.get("Relevant_Facts", []))),
                 "risks": dict_list_to_text_array(canvas_data.get("Risks")),
                 "assumptions": to_array(canvas_data.get("Assumptions")),
                 # Convert Non Functional Requirements dict to flat list of strings for TEXT[] column
-                "non_functional_requirements": to_jsonb(canvas_data.get("Non Functional Requirements")),
-                "use_cases": dict_list_to_text_array(canvas_data.get("Use Cases")),
+                "non_functional_requirements": to_jsonb(canvas_data.get("Non Functional Requirements",canvas_data.get("Non_Functional_Requirements", {}))),
+                "use_cases": dict_list_to_text_array(canvas_data.get("Use Cases",canvas_data.get("Use_Cases", []))),
                 "governance": to_jsonb(canvas_data.get("Governance", [])),
                 "tags": to_array(canvas_data.get("Tags", []))
             }
@@ -411,6 +420,64 @@ class PostgresStore:
             result = cur.fetchone()
             return dict(result) if result else None
         
+        finally:
+            cur.close()
+            conn.close()
+
+    def toggle_manual_update(self, canvas_id: str, manual_update: bool) -> bool:
+            """
+            Update the manual_update field for a given canvas_id in canvas_fields.
+            Args:
+                canvas_id: Canvas UUID
+                manual_update: Boolean value to set
+            Returns:
+                True if update was successful, False otherwise
+            """
+            conn = get_db_connection()
+            cur = get_db_cursor(conn)
+            try:
+                cur.execute(
+                    """
+                    UPDATE canvas_fields
+                    SET manual_update = %s
+                    WHERE canvas_id = %s
+                    """,
+                    (manual_update, canvas_id)
+                )
+                conn.commit()
+                return cur.rowcount > 0
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Failed to update manual_update: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    def check_manual_update(self, canvas_id: str) -> bool:
+        """
+        Check the manual_update field for a given canvas_id in canvas_fields.
+        
+        Args:
+            canvas_id: Canvas UUID
+        
+        Returns:
+            manual_update value (True/False)
+        """
+        conn = get_db_connection()
+        cur = get_db_cursor(conn)
+        try:
+            cur.execute(
+                """
+                SELECT manual_update
+                FROM canvas_fields
+                WHERE canvas_id = %s
+                """,
+                (canvas_id,)
+            )
+            result = cur.fetchone()
+            return result[0]
+        except Exception as e:
+            raise Exception(f"Failed to check manual_update: {str(e)}")
         finally:
             cur.close()
             conn.close()

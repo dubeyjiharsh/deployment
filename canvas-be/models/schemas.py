@@ -1,5 +1,5 @@
-from typing import Optional, List, Dict, Any, Union
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, AliasChoices, ConfigDict, RootModel
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
  
 # Request Models
@@ -66,10 +66,11 @@ class RiskItem(BaseModel):
     mitigation: str
  
 class NonFunctionalRequirementItem(BaseModel):
-    performance: List[str]= Field(..., alias="Performance & Scalability")
-    data_quality: List[str]= Field(..., alias="Data Quality & Integration")
-    reliability: List[str]= Field(..., alias="Reliability")
-    security: List[str]= Field(..., alias="Security/Compliance/Privacy")    
+    model_config = ConfigDict(validate_by_name=True)
+    performance: List[str]= Field(..., validation_alias=AliasChoices("Performance & Scalability", "performance"))
+    data_quality: List[str]= Field(..., validation_alias=AliasChoices("Data Quality & Integration", "data_quality"))
+    reliability: List[str]= Field(..., validation_alias=AliasChoices("Reliability", "reliability"))
+    security: List[str]= Field(..., validation_alias=AliasChoices("Security/Compliance/Privacy", "security"))    
  
 class UseCaseItem(BaseModel):
     use_case: str
@@ -78,18 +79,19 @@ class UseCaseItem(BaseModel):
     scenario: str
  
 class CanvasFieldList(BaseModel):
-    Title: str = Field(..., alias="Title")
-    Problem_Statement: str = Field(..., alias="Problem Statement")
-    Objectives: List[str] = Field(..., alias="Objectives")
-    KPIs: List[KPIItem] = Field(..., alias="KPIs")
-    Success_Criteria: List[str] = Field(..., alias="Success Criteria")
-    Key_Features: List[KeyFeatureItem] = Field(..., alias="Key Features")
-    Risks: List[RiskItem] = Field(..., alias="Risks")
-    Assumptions: List[str] = Field(..., alias="Assumptions")
-    Non_Functional_Requirements: NonFunctionalRequirementItem = Field(..., alias="Non Functional Requirements")
-    Use_Cases: List[UseCaseItem] = Field(..., alias="Use Cases")
-    Governance: Optional[Dict[str, Any]] = Field(None, alias="Governance")
-    Relevant_Facts: List[str] = Field(..., alias="Relevant Facts")  
+    model_config = ConfigDict(validate_by_name=True)
+    Title: str = Field(..., validation_alias=AliasChoices("Title", "title"))
+    Problem_Statement: str = Field(..., validation_alias=AliasChoices("Problem Statement", "problem_statement"))
+    Objectives: List[str] = Field(..., validation_alias=AliasChoices("Objectives", "objectives"))
+    KPIs: List[KPIItem] = Field(..., validation_alias=AliasChoices("KPIs", "kpis"))
+    Success_Criteria: List[str] = Field(..., validation_alias=AliasChoices("Success Criteria", "success_criteria"))
+    Key_Features: List[KeyFeatureItem] = Field(..., validation_alias=AliasChoices("Key Features", "key_features"))
+    Risks: List[RiskItem] = Field(..., validation_alias=AliasChoices("Risks", "risks"))
+    Assumptions: List[str] = Field(..., validation_alias=AliasChoices("Assumptions", "assumptions"))
+    Non_Functional_Requirements: NonFunctionalRequirementItem = Field(..., validation_alias=AliasChoices("Non Functional Requirements", "non_functional_requirements"))
+    Use_Cases: List[UseCaseItem] = Field(..., validation_alias=AliasChoices("Use Cases", "use_cases"))
+    Governance: Optional[Dict[str, Any]] = Field(None, validation_alias=AliasChoices("Governance", "governance"))
+    Relevant_Facts: Optional[List[str]] = Field(None, validation_alias=AliasChoices("Relevant Facts", "relevant_facts"))  
  
 class CanvasListResponse(BaseModel):
     """Response for listing canvases"""

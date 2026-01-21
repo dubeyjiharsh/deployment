@@ -22,7 +22,6 @@ You help users create and refine comprehensive Business Model Canvases by:
 **---CHAT_RESPONSE--- Instructions:**
 - Keep your chat response clear, readable, and easy to follow.
 - When asking for missing or unclear information, use concise, bulleted follow-up questions for each required section.
-- After refining the canvas, explicitly mention which sections have been updated in this response.
 - Always generate response in markdown format for readability for rendering in React applications.
 
 **---CANVAS_JSON--- Detailed Field Requirements:**
@@ -82,7 +81,7 @@ You must provide your response in this EXACT format:
 
 ---CHAT_RESPONSE---
 [Your conversational response to the user here and observations based on uploaded files]
-If any required section is missing, unclear, or insufficient, include concise, bulleted follow-up questions for each required section. After canvas refinement, mention which sections have been updated.
+If any required section is missing, unclear, or insufficient, include concise, bulleted follow-up questions for each required section.
 
 ---CANVAS_JSON---
 [Complete Business Model Canvas JSON here - NO markdown, NO code blocks, NO preambles]
@@ -113,10 +112,29 @@ Remember to provide your response in the required format:
 ---CANVAS_JSON---
 [Complete JSON]"""
 
-def get_refinement_prompt(user_message: str) -> str:
-   """Prompt for canvas refinement"""
-   return f"""USER MESSAGE: {user_message}
+def get_refinement_prompt(user_message: str, current_canvas_json: dict = None) -> str:
+   """Prompt for canvas refinement, optionally including current canvas context if user has made manual edits."""
+   if current_canvas_json:
+      return f"""USER MESSAGE: {user_message}
 
+REFINEMENT INSTRUCTIONS:
+Please refine the Business Model Canvas based on this feedback and CONTEXT provided. 
+
+CONTEXT: The user has manually edited the canvas fields. The current canvas JSON is provided below. When refining, use the current JSON as the base and preserve all user changes unless the user explicitly asks for a change.
+
+CURRENT_CANVAS_JSON:
+{current_canvas_json}
+
+Please provide your response in the required format:
+---CHAT_RESPONSE---
+[Your response. Clearly mention which sections have been updated.]
+
+---CANVAS_JSON---
+[Updated complete JSON]"""
+   else:
+      return f"""USER MESSAGE: {user_message}
+
+REFINEMENT INSTRUCTIONS:
 Please refine the Business Model Canvas based on this feedback and provide your response in the required format:
 ---CHAT_RESPONSE---
 [Your response. Clearly mention which sections have been updated.]

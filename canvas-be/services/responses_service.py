@@ -37,7 +37,8 @@ class ResponsesService:
         message: str,
         previous_response_id: str = None,
         file_ids: list = None,
-        is_first_message: bool = False
+        is_first_message: bool = False,
+        current_canvas_json: dict = None
     ) -> Tuple[str, str, Dict[str, Any]]:
         """
         Send a message to the assistant and get both chat response and canvas JSON
@@ -47,6 +48,7 @@ class ResponsesService:
             message: User's message
             file_ids: List of file IDs to attach
             is_first_message: Whether this is the first message (initial canvas generation)
+            current_canvas_json: Current canvas JSON for context if manual_update is True
         Returns:
             Tuple[str, Dict]: (chat_response, canvas_json)
         """
@@ -75,7 +77,8 @@ class ResponsesService:
             )
 
         else:
-            prompt = get_refinement_prompt(message)
+            # If manual_update is True, pass current_canvas_json as context
+            prompt = get_refinement_prompt(message, current_canvas_json)
             input_data[0]['content'].append({"type": "input_text", "text": prompt})
             # Send message to thread
             response = self.client.responses.create(
@@ -156,7 +159,7 @@ class ResponsesService:
         if "USER MESSAGE:" in prompt_content:
             parts = prompt_content.split("USER MESSAGE:")
             if len(parts) > 1:
-                message_part = parts[1].split("\n\nPlease refine")[0]
+                message_part = parts[1].split("\n\nREFINEMENT INSTRUCTIONS:")[0]
                 return message_part.strip()
         
         # Fallback: return original content
