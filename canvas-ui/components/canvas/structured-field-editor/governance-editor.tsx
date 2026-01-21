@@ -1,14 +1,14 @@
 "use client";
-
+ 
 /**
- * GovernanceEditor
- *
- * Editor for governance fields with approvers and reviewers sections.
- * Used for: Governance
- *
- * UI: Two collapsible sections, each with cards for people
- */
-
+* GovernanceEditor
+*
+* Editor for governance fields with approvers and reviewers sections.
+* Used for: Governance
+*
+* UI: Two collapsible sections, each with cards for people
+*/
+ 
 import * as React from "react";
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,15 @@ import {
   type GovernancePersonValue,
 } from "@/lib/validators/structured-field-schemas";
 import type { StructuredFieldEditorProps } from "./index";
-
-type GovernanceCategory = "approvers" | "reviewers" | "requirementLeads";
-
+import { API_ENDPOINTS } from '@/config/api';
+import { toast } from "sonner";
+ 
+// type GovernanceCategory = "approvers" | "reviewers" | "requirementLeads";
+type GovernanceCategory = "approvers" | "reviewers";
+ 
 /**
- * Normalizes value to GovernanceValue shape
- */
+* Normalizes value to GovernanceValue shape
+*/
 function normalizeGovernance(value: unknown): GovernanceValue {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     const v = value as Record<string, unknown>;
@@ -40,43 +43,175 @@ function normalizeGovernance(value: unknown): GovernanceValue {
       reviewers: Array.isArray(v.reviewers)
         ? v.reviewers.map(normalizeGovPerson)
         : [],
-      requirementLeads: Array.isArray(v.requirementLeads)
-        ? v.requirementLeads.map(normalizeGovPerson)
-        : [],
+      // requirementLeads: Array.isArray(v.requirementLeads)
+        // ? v.requirementLeads.map(normalizeGovPerson)
+        // : [],
     };
   }
-  return { approvers: [], reviewers: [], requirementLeads: [] };
+  // return { approvers: [], reviewers: [], requirementLeads: [] };
+  return { approvers: [], reviewers: []};
 }
-
+ 
+// Helper function from CanvasPreviewPage
+function parseJsonIfString(v: unknown) {
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v);
+    } catch (e) {
+      return v;
+    }
+  }
+  return v;
+}
+ 
+ 
+function transformFieldsToCanvas(fields: any) {
+  const makeField = (value: any) => ({ value: value ?? null, evidence: [], confidence: 0.5 });
+ 
+  const parseArray = (arr: any) => {
+    if (!Array.isArray(arr)) return arr ?? [];
+    return arr.map((it) => parseJsonIfString(it));
+  };
+ 
+  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
+  const organizedNFRs: any = {};
+  if (Array.isArray(nfrRaw)) {
+    nfrRaw.forEach((item: any) => {
+      const cat = item.category || "General";
+      const req = item.requirement || "";
+      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
+      organizedNFRs[cat].push(req);
+    });
+  }
+ 
+  let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
+  let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
+    ? relevantFactsRaw.filter((v) => typeof v === 'string')
+    : [];
+ 
+  return {
+    id: fields.canvas_id || fields.canvasId || "",
+    title: makeField(fields.Title || fields.title || "Untitled Canvas"),
+    problemStatement: makeField(fields.problem_statement || fields.problemStatement || fields["Problem Statement"]),
+    objectives: makeField(parseArray(fields.Objectives || fields.objectives)),
+    kpis: makeField(parseArray(fields.KPIs || fields.kpis)),
+    successCriteria: makeField(parseArray(fields["Success Criteria"] || fields.success_criteria)),
+    keyFeatures: makeField(parseArray(fields["Key Features"] || fields.key_features)),
+    risks: makeField(parseArray(fields.Risks || fields.risks)),
+    assumptions: makeField(parseArray(fields.Assumptions || fields.assumptions)),
+    nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
+    useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
+    governance: makeField(fields.Governance || fields.governance || {}),
+    relevantFacts: makeField(parseArray(fields.relevantFacts || fields.relevant_facts)),
+    createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
+    updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
+  };
+}
+ 
+// Converts the frontend canvas object to the backend payload format (handles NFR and Governance/Relevant Facts)
+function mapCanvasToBackendPayload(canvas: any) {
+  // Get the NFR value - it should already be in the correct categorized format
+  const nfrValue = canvas.nonFunctionalRequirements?.value || {};
+  
+  // Ensure NFRs are in the correct object format with categories as keys and arrays as values
+  let formattedNFRs: any = {};
+  
+  if (Array.isArray(nfrValue)) {
+    // If it's an array, convert it to categorized format
+    nfrValue.forEach((item: any) => {
+      if (typeof item === 'string') {
+        // Check if the string has a category prefix (e.g., "Performance & Scalability: ...")
+        const colonIndex = item.indexOf(':');
+        if (colonIndex > 0) {
+          const category = item.substring(0, colonIndex).trim();
+          const requirement = item.substring(colonIndex + 1).trim();
+          if (!formattedNFRs[category]) formattedNFRs[category] = [];
+          formattedNFRs[category].push(requirement);
+        } else {
+          // No category prefix, put it in "General"
+          if (!formattedNFRs["General"]) formattedNFRs["General"] = [];
+          formattedNFRs["General"].push(item);
+        }
+      } else if (item.category && item.requirement) {
+        // If it has category and requirement properties
+        if (!formattedNFRs[item.category]) formattedNFRs[item.category] = [];
+        formattedNFRs[item.category].push(item.requirement);
+      }
+    });
+  } else if (typeof nfrValue === 'object' && nfrValue !== null) {
+    // If it's already an object, use it directly (ensuring arrays)
+    formattedNFRs = nfrValue;
+    // Ensure all values are arrays and filter out any that already have category prefixes
+    Object.keys(formattedNFRs).forEach(key => {
+      if (!Array.isArray(formattedNFRs[key])) {
+        formattedNFRs[key] = [];
+      } else {
+        // Clean up requirements that might still have category prefixes
+        formattedNFRs[key] = formattedNFRs[key].map((req: string) => {
+          if (typeof req === 'string' && req.includes(':')) {
+            const parts = req.split(':');
+            // Only remove prefix if it matches the current category
+            if (parts[0].trim() === key) {
+              return parts.slice(1).join(':').trim();
+            }
+          }
+          return req;
+        });
+      }
+    });
+  }
+ 
+  return {
+    "Title": canvas.title?.value || "",
+    "Problem Statement": canvas.problemStatement?.value || "",
+    "Objectives": Array.isArray(canvas.objectives?.value) ? canvas.objectives.value : [],
+    "KPIs": Array.isArray(canvas.kpis?.value) ? canvas.kpis.value : [],
+    "Success Criteria": Array.isArray(canvas.successCriteria?.value) ? canvas.successCriteria.value : [],
+    "Key Features": Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [],
+    "Risks": Array.isArray(canvas.risks?.value) ? canvas.risks.value : [],
+    "Assumptions": Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [],
+    "Non Functional Requirements": formattedNFRs,
+    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null && !Array.isArray(canvas.governance.value)
+      ? canvas.governance.value
+      : {},
+    "Relevant Facts": Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [],
+    "Use Cases": Array.isArray(canvas.useCases?.value) ? canvas.useCases.value : [],
+  };
+}
+ 
+ 
 function normalizeGovPerson(p: unknown): GovernancePersonValue {
   if (typeof p === "object" && p !== null) {
     const person = p as Record<string, unknown>;
     return {
+      name: String(person.name || ""),
       role: String(person.role || ""),
-      responsibility: String(person.responsibility || ""),
-      authority: String(person.authority || ""),
+      function: String(person.function || ""),
     };
   }
-  return { role: "", responsibility: "", authority: "" };
+  return { name: "", role: "",  function: "" };
 }
-
+ 
 function createEmptyPerson(): GovernancePersonValue {
-  return { role: "", responsibility: "", authority: "" };
+  return { name: "", role: "", function: "" };
 }
-
+ 
 export function GovernanceEditor({
   value,
   onChange,
   onSave,
   onCancel,
   isSaving,
-}: StructuredFieldEditorProps): React.ReactElement {
+  fieldKey,
+}: StructuredFieldEditorProps & { fieldKey: keyof ReturnType<typeof transformFieldsToCanvas> }): React.ReactElement {
+  const [isActuallySaving, setIsActuallySaving] = React.useState(false);
   const governance = React.useMemo(() => normalizeGovernance(value), [value]);
-
+ 
   const [expandedCategories, setExpandedCategories] = React.useState<Set<GovernanceCategory>>(
-     new Set(["approvers", "reviewers", "requirementLeads"])
+    //  new Set(["approvers", "reviewers", "requirementLeads"])
+    new Set(["approvers", "reviewers"])
   );
-
+ 
   const toggleCategory = (category: GovernanceCategory) => {
     setExpandedCategories(prev => {
       const next = new Set(prev);
@@ -88,7 +223,7 @@ export function GovernanceEditor({
       return next;
     });
   };
-
+ 
   const handleAddPerson = (category: GovernanceCategory) => {
     const newPerson = createEmptyPerson();
     onChange({
@@ -96,7 +231,7 @@ export function GovernanceEditor({
       [category]: [...governance[category], newPerson],
     });
   };
-
+ 
   const handleUpdatePerson = (
     category: GovernanceCategory,
     index: number,
@@ -109,14 +244,14 @@ export function GovernanceEditor({
       [category]: newList,
     });
   };
-
+ 
   const handleDeletePerson = (category: GovernanceCategory, index: number) => {
     onChange({
       ...governance,
       [category]: governance[category].filter((_, i) => i !== index),
     });
   };
-
+ 
   const handleMovePerson = (
     category: GovernanceCategory,
     fromIndex: number,
@@ -130,16 +265,87 @@ export function GovernanceEditor({
       [category]: newList,
     });
   };
-
-  const categories: GovernanceCategory[] = ["approvers", "reviewers", "requirementLeads"];
-
+ 
+  const handleSaveChanges = async (): Promise<void> => {
+    setIsActuallySaving(true);
+ 
+    try {
+      // Get canvas ID from sessionStorage
+      const canvasId = sessionStorage.getItem("canvasId");
+      if (!canvasId) {
+        toast.error("No canvas ID found");
+        return;
+      }
+ 
+      // Get the full canvas data from sessionStorage
+      const canvasJsonStr = sessionStorage.getItem("canvasJson");
+      if (!canvasJsonStr) {
+        toast.error("No canvas data found");
+        return;
+      }
+ 
+      const canvasJson = JSON.parse(canvasJsonStr);
+      const canvas = transformFieldsToCanvas(canvasJson);
+ 
+      // Update the specific field with current value
+      if (canvas[fieldKey]) {
+        canvas[fieldKey].value = value;
+      }
+ 
+      // Convert to backend payload format
+      const payload = mapCanvasToBackendPayload(canvas);
+ 
+      // Make the API call
+      const url = API_ENDPOINTS.canvasSave(canvasId);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionStorage.getItem("authToken") || ""}`,
+        },
+        body: JSON.stringify(payload),
+      });
+ 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+ 
+      const data = await res.json();
+ 
+      // Update sessionStorage with new data
+      sessionStorage.setItem("canvasJson", JSON.stringify(data.fields || data));
+ 
+      toast.success("Canvas saved successfully!");
+ 
+      // Call the original onSave callback if provided
+      if (onSave) {
+        onSave();
+      }
+ 
+      // Reload the page after a short delay to show the toast
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      toast.error("Failed to save canvas");
+      console.error("Failed to save canvas:", error);
+    } finally {
+      setIsActuallySaving(false);
+    }
+  };
+ 
+ 
+ 
+  // const categories: GovernanceCategory[] = ["approvers", "reviewers", "requirementLeads"];
+    const categories: GovernanceCategory[] = ["approvers", "reviewers"];
+ 
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       {categories.map((category) => {
         const people = governance[category];
         const isExpanded = expandedCategories.has(category);
         const label = GOVERNANCE_CATEGORY_LABELS[category];
-
+ 
         return (
           <Collapsible
             key={category}
@@ -164,7 +370,7 @@ export function GovernanceEditor({
                   </CardTitle>
                 </CardHeader>
               </CollapsibleTrigger>
-
+ 
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-4 px-4">
                   <div className="space-y-3">
@@ -185,13 +391,13 @@ export function GovernanceEditor({
                         }
                       />
                     ))}
-
+ 
                     {people.length === 0 && (
                       <div className="text-center py-6 text-sm text-muted-foreground border-2 border-dashed rounded-lg">
                         No {label.toLowerCase()} yet.
                       </div>
                     )}
-
+ 
                     <Button
                       type="button"
                       variant="outline"
@@ -204,8 +410,8 @@ export function GovernanceEditor({
                         ? "Add Approver"
                         : category === "reviewers"
                         ? "Add Reviewer"
-                        : category === "requirementLeads"
-                        ? "Add Requirement Lead"
+                        // : category === "requirementLeads"
+                        // ? "Add Requirement Lead"
                         : ""}
                     </Button>
                   </div>
@@ -215,23 +421,23 @@ export function GovernanceEditor({
           </Collapsible>
         );
       })}
-
+ 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t bg-background sticky bottom-0 z-10">
         <Button variant="outline" onClick={onCancel} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Changes"}
-        </Button>
+        <Button onClick={handleSaveChanges} disabled={isActuallySaving || isSaving}>
+                  {isActuallySaving || isSaving ? "Saving..." : "Save Changes"}
+                </Button>
       </div>
     </div>
   );
 }
-
+ 
 /**
- * Individual governance person card
- */
+* Individual governance person card
+*/
 interface GovernancePersonCardProps {
   person: GovernancePersonValue;
   index: number;
@@ -241,7 +447,7 @@ interface GovernancePersonCardProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
-
+ 
 function GovernancePersonCard({
   person,
   index,
@@ -286,49 +492,49 @@ function GovernancePersonCard({
             </div>
           )}
         </div>
-
+ 
         {/* Form fields */}
         <div className="flex-1 space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor={`name-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.name}
+            </Label>
+            <Input
+              id={`name-${index}`}
+              value={person.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="No Names yet. Add one below"
+              className="h-9"
+            />
+          </div>
+ 
           <div className="space-y-1.5">
             <Label htmlFor={`role-${index}`} className="text-xs text-muted-foreground">
               {GOVERNANCE_PERSON_FIELD_LABELS.role}
             </Label>
-            <Input
+            <Textarea
               id={`role-${index}`}
               value={person.role}
               onChange={(e) => onChange({ role: e.target.value })}
-              placeholder="e.g., Digital Product Director"
-              className="h-9"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor={`responsibility-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.responsibility}
-            </Label>
-            <Textarea
-              id={`responsibility-${index}`}
-              value={person.responsibility}
-              onChange={(e) => onChange({ responsibility: e.target.value })}
-              placeholder="What they oversee..."
+              placeholder="No Roles yet. Add one below"
               className="min-h-[50px] resize-none text-sm"
             />
           </div>
-
+ 
           <div className="space-y-1.5">
-            <Label htmlFor={`authority-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.authority}
+            <Label htmlFor={`function-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.function}
             </Label>
             <Textarea
-              id={`authority-${index}`}
-              value={person.authority}
-              onChange={(e) => onChange({ authority: e.target.value })}
-              placeholder="What they have final say on..."
+              id={`function-${index}`}
+              value={person.function}
+              onChange={(e) => onChange({ function: e.target.value })}
+              placeholder="No Functions yet. Add one below"
               className="min-h-[50px] resize-none text-sm"
             />
           </div>
         </div>
-
+ 
         {/* Delete button */}
         <Button
           type="button"

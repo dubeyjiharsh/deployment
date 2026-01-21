@@ -12,9 +12,10 @@ import { DashboardPage } from "@/src/pages/DashboardPage";
 import { CreateCanvasPage } from "@/src/pages/CreateCanvasPage";
 import { CanvasPage } from "@/src/pages/CanvasPage";
 import { UserManagementPage } from "@/src/pages/UserManagementPage";
+import { AdminConfigurePage } from "@/src/pages/AdminConfigurePage";
 import { NotFoundPage } from "@/src/pages/NotFoundPage";
 import { CanvasPreviewPage } from "@/src/pages/CanvasPreviewPage";
-import { isAuthenticated, doLogin } from "@/src/lib/auth";
+import { isAuthenticated, doLogin, isProjectAdmin } from "@/src/lib/auth";
 import LogoutPage from "@/src/pages/LogoutPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -36,6 +37,8 @@ export function App(): React.ReactElement {
         targetPath = '/logout';
       } else if (hash.includes('dashboard')) {
         targetPath = '/';
+      } else if (hash.includes('admin-configure')) {
+        targetPath = '/admin-configure';
       }
       
       window.history.replaceState(null, '', `${window.location.origin}/#${targetPath}`);
@@ -65,6 +68,8 @@ export function App(): React.ReactElement {
       cleanPath = '/logout';
     } else if (cleanPath.includes('dashboard')) {
       cleanPath = '/';
+    } else if (cleanPath.includes('admin-configure')) {
+      cleanPath = '/admin-configure';
     } else {
       cleanPath = '/';
     }
@@ -143,6 +148,26 @@ export function App(): React.ReactElement {
 
   console.log("Routing to:", cleanPath);
 
+  // Protected route guard for admin-configure
+  const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
+    if (!isProjectAdmin()) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to access this page.
+            </p>
+            <p className="text-sm text-gray-500">
+              This page is only accessible to Project Administrators.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return <>{children}</>;
+  };
+
   return (
     <ThemeProvider
       attribute="class"
@@ -168,6 +193,14 @@ export function App(): React.ReactElement {
                   <Route path="/canvas-preview/:id" element={<CanvasPreviewPage />} />
                   <Route path="/canvas/:id" element={<CanvasPage />} />
                   <Route path="/admin" element={<UserManagementPage />} />
+                  <Route 
+                    path="/admin-configure" 
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminConfigurePage />
+                      </ProtectedAdminRoute>
+                    } 
+                  />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </ErrorBoundary>

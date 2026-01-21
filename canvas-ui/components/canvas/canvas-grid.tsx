@@ -170,8 +170,62 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
 }
  
 function renderValue(value: unknown): React.ReactNode {
-    // Special handling: Render 'Non Functional Requirements' as a bullet list (like Risks)
+    // Special handling: Render 'Risks' as bullet list with bold title and mitigation below
     if (Array.isArray(value) && value.length > 0) {
+      // Risks: array of objects with 'risk' and 'mitigation'
+      if (value.every((risk) => typeof risk === 'object' && risk !== null && 'risk' in risk && 'mitigation' in risk)) {
+        return (
+          <ul className="list-disc pl-5 space-y-4">
+            {value.map((riskObj: any, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">
+                <span className="font-semibold">Risk {idx + 1}: {riskObj.risk}</span>
+                {riskObj.mitigation && (
+                  <div className="ml-2"><span className="font-medium">Mitigation:</span> {riskObj.mitigation}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      // Key Features: array of objects with 'feature', 'priority', 'description'
+      if (value.every((feat) => typeof feat === 'object' && feat !== null && 'feature' in feat)) {
+        return (
+          <ul className="list-disc pl-5 space-y-4">
+            {value.map((featObj: any, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">
+                <div className="font-semibold">
+                  {featObj.feature}
+                  {featObj.priority && (
+                    <span className="ml-2 font-bold">({featObj.priority})</span>
+                  )}
+                </div>
+                {featObj.description && (
+                  <div className="ml-2 text-muted-foreground">{featObj.description}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      // KPIs: array of objects with 'metric', 'baseline', 'target', 'measurement_frequency'
+      if (value.every((kpi) => typeof kpi === 'object' && kpi !== null && 'metric' in kpi)) {
+        return (
+          <ul className="list-disc pl-5 space-y-2">
+            {value.map((kpiObj: any, idx: number) => {
+              const metric = kpiObj.metric || '';
+              const baseline = kpiObj.baseline || 'TBD';
+              const target = kpiObj.target || '';
+              const measurement = kpiObj.measurement_frequency || '';
+              return (
+                <li key={idx} className="text-sm leading-relaxed">
+                  <span className="font-bold">{metric}</span><br />
+                  <span> {baseline} &rarr; {target} ({measurement})</span>
+                </li>
+              );
+            })}
+          </ul>
+        );
+      }
       // If all are strings
       if (value.every((nfr) => typeof nfr === 'string')) {
         return (
@@ -182,19 +236,51 @@ function renderValue(value: unknown): React.ReactNode {
           </ul>
         );
       }
-      // If all are objects with requirement/category/rationale
-      if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr)) {
+      // NFR: array of objects with category and requirement, or object with category keys
+      if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr && 'category' in nfr)) {
+        // Group by category
+        const grouped: Record<string, string[]> = {};
+        value.forEach((nfr: any) => {
+          const cat = nfr.category || 'General';
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(nfr.requirement);
+        });
         return (
-          <ul className="list-disc pl-5 space-y-1">
-            {value.map((nfr: any, idx: number) => (
-              <li key={idx} className="text-sm leading-relaxed">
-                <strong>{nfr.category ? `${nfr.category}: ` : ""}</strong>
-                {nfr.requirement}
-                {nfr.rationale ? <span> <em>({nfr.rationale})</em></span> : null}
-              </li>
+          <div className="space-y-4">
+            {Object.entries(grouped).map(([cat, points]) => (
+              <div key={cat}>
+                <div className="font-semibold mb-1">{cat.replace(/:/,"")}</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {points.map((pt, idx) => (
+                    <li key={idx} className="text-sm leading-relaxed">{pt}</li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         );
+      }
+      // NFR: object with category keys, each containing array of points
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const categories = Object.entries(value).filter(([cat, arr]) => Array.isArray(arr) && arr.length > 0);
+        if (categories.length > 0) {
+          return (
+            <div className="space-y-4">
+              {categories.map(([cat, arr]) => (
+                <div key={cat}>
+                  <div className="font-semibold mb-1">{cat.replace(/:/,"")}</div>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {(arr as string[])
+                      .flatMap((pt) => pt.split(/\s*,\s*/).filter(Boolean))
+                      .map((pt, idx) => (
+                        <li key={idx} className="text-sm leading-relaxed">{pt}</li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          );
+        }
       }
     }
   if (value === null || value === undefined || value === "") {
@@ -229,6 +315,34 @@ function renderValue(value: unknown): React.ReactNode {
     }
     // Render array-of-objects as persona/use-case style cards
     const allObjects = value.every((v) => v && typeof v === "object" && !Array.isArray(v));
+    // Special handling for use cases: numbered, then bullet points for actor, goal, scenario
+    if (allObjects && value.length > 0 && ["actor", "goal", "scenario"].every(key => key in value[0])) {
+      return (
+        <div className="space-y-4">
+          {value.map((v, idx) => {
+            const obj = v as Record<string, unknown>;
+            const actor = obj.actor !== undefined ? String(obj.actor) : "—";
+            const goal = obj.goal !== undefined ? String(obj.goal) : "—";
+            const scenario = obj.scenario !== undefined ? String(obj.scenario) : "—";
+            const useCaseDesc = typeof obj.use_case === 'string' ? obj.use_case : (typeof obj.description === 'string' ? obj.description : "");
+            return (
+              <div key={idx} className="space-y-1">
+                <div className="font-semibold">
+                  {`Use case ${idx + 1}`}
+                  {useCaseDesc ? <span className="font-semibold"> - {useCaseDesc}</span> : null}
+                </div>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li className="text-sm leading-relaxed"><span className="font-medium">Actor:</span> {actor}</li>
+                  <li className="text-sm leading-relaxed"><span className="font-medium">Goal:</span> {goal}</li>
+                  <li className="text-sm leading-relaxed"><span className="font-medium">Scenario:</span> {scenario}</li>
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    // Default: generic object array rendering
     if (allObjects) {
       return (
         <div className="space-y-4">
@@ -426,6 +540,50 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     }
   };
  
+  // Helper to render governance tables
+  function renderGovernanceTables(governance: any) {
+    if (!governance || (Array.isArray(governance) && governance.length === 0)) return <span className="text-muted-foreground">—</span>;
+    const { approvers = [], reviewers = [] } = governance;
+    const columns = ["name", "role", "function"];
+    const colLabels = ["Name", "Role", "Function"];
+    // Helper to render a table with column separators
+    function renderTable(people: any[], label: string) {
+      return (
+        <div>
+          <div className="font-semibold mb-2">{label}</div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border text-sm border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-muted">
+                  {colLabels.map((col, idx) => (
+                    <th key={col} className={`px-3 py-2 border-b border-r last:border-r-0 text-left font-medium`}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {people.length === 0 ? (
+                  <tr><td colSpan={3} className="px-3 py-2 text-muted-foreground">—</td></tr>
+                ) : people.map((person: any, idx: number) => (
+                  <tr key={idx}>
+                    {columns.map((col, cidx) => (
+                      <td key={col} className={`px-3 py-2 border-b border-r last:border-r-0`}>{person[col] ? person[col] : "—"}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-6">
+        {renderTable(approvers, "Approvers")}
+        {renderTable(reviewers, "Reviewers")}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header cards */}
@@ -441,35 +599,50 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
             <EvidenceMenu evidence={headerProblem.evidence} />
           </div>
         </Card>
- 
-        {/* <Card className="p-5">
-          <div className="space-y-3">
-            <h2 className="text-base font-semibold text-primary">Problem Statement</h2>
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {renderValue(headerProblem.value)}
-            </div>
-            <EvidenceMenu evidence={headerProblem.evidence} />
-          </div>
-        </Card> */}
       </div>
- 
-      {/* Tabs bar (Canvas and BRD beside each other) */}
+
       <Tabs defaultValue="canvas" className="w-full">
         <div className="flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="canvas">Canvas</TabsTrigger>
           </TabsList>
-          {/* <div className="text-xs text-muted-foreground">All fields visible (static demo)</div> */}
         </div>
- 
+
         <TabsContent value="canvas" className="mt-4 space-y-4">
-          {/* Field grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {contentConfigs.map((config) => {
               const raw = (canvas as Record<string, unknown>)[config.fieldKey];
               const field = ensureField(raw, config.valueType);
               const hasEvidence = Array.isArray(field.evidence) && field.evidence.length > 0;
- 
+
+              // Special rendering for Governance field in preview (not edit dialog)
+              if (config.fieldKey === "governance") {
+                return (
+                  <Card key={config.fieldKey} className="p-4 h-80 max-h-80 flex flex-col">
+                    <div className="flex items-start justify-start gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-primary truncate">{config.name}</h3>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEdit(config.fieldKey)}
+                        className="shrink-0"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+
+
+
+                    </div>
+                    <ScrollArea className="mt-3 flex-1 w-full">
+                      {renderGovernanceTables(field.value)}
+                    </ScrollArea>
+                  </Card>
+                );
+              }
+
               return (
                 <Card key={config.fieldKey} className="p-4 h-80 max-h-80 flex flex-col">
                   <div className="flex items-start justify-start gap-3">
@@ -486,9 +659,8 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                       Edit
                     </Button>
                   </div>
- 
                   <ScrollArea className="mt-3 flex-1 w-full">
-                    <div className={cn("", typeof field.value === "object" ? "" : "")}>
+                    <div className={cn("", typeof field.value === "object" ? "" : "")}> 
                       {renderValue(field.value)}
                     </div>
                     {hasEvidence && (
@@ -503,7 +675,7 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
           </div>
         </TabsContent>
       </Tabs>
- 
+
       <Dialog open={!!activeFieldKey} onOpenChange={(open) => (!open ? closeEdit() : null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -514,7 +686,7 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                 : ""}
             </DialogTitle>
           </DialogHeader>
- 
+
           {activeFieldKey ? (
             <StructuredFieldEditor
               fieldKey={activeFieldKey}
@@ -550,7 +722,6 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
               Loading...
             </div>
           )}
-          {/* File upload removed as per user request */}
         </DialogContent>
       </Dialog>
     </div>

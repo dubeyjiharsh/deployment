@@ -184,14 +184,65 @@ function transformFieldsToCanvas(fields: any) {
     nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
     useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
     governance: makeField(fields.Governance || fields.governance || {}),
-    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevantFacts)),
+    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevant_facts)),
     createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
     updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
   };
 }
 
-// Maps the internal canvas object to the backend payload format.
+// Converts the frontend canvas object to the backend payload format (handles NFR and Governance/Relevant Facts)
 function mapCanvasToBackendPayload(canvas: any) {
+  // Get the NFR value - it should already be in the correct categorized format
+  const nfrValue = canvas.nonFunctionalRequirements?.value || {};
+  
+  // Ensure NFRs are in the correct object format with categories as keys and arrays as values
+  let formattedNFRs: any = {};
+  
+  if (Array.isArray(nfrValue)) {
+    // If it's an array, convert it to categorized format
+    nfrValue.forEach((item: any) => {
+      if (typeof item === 'string') {
+        // Check if the string has a category prefix (e.g., "Performance & Scalability: ...")
+        const colonIndex = item.indexOf(':');
+        if (colonIndex > 0) {
+          const category = item.substring(0, colonIndex).trim();
+          const requirement = item.substring(colonIndex + 1).trim();
+          if (!formattedNFRs[category]) formattedNFRs[category] = [];
+          formattedNFRs[category].push(requirement);
+        } else {
+          // No category prefix, put it in "General"
+          if (!formattedNFRs["General"]) formattedNFRs["General"] = [];
+          formattedNFRs["General"].push(item);
+        }
+      } else if (item.category && item.requirement) {
+        // If it has category and requirement properties
+        if (!formattedNFRs[item.category]) formattedNFRs[item.category] = [];
+        formattedNFRs[item.category].push(item.requirement);
+      }
+    });
+  } else if (typeof nfrValue === 'object' && nfrValue !== null) {
+    // If it's already an object, use it directly (ensuring arrays)
+    formattedNFRs = nfrValue;
+    // Ensure all values are arrays and filter out any that already have category prefixes
+    Object.keys(formattedNFRs).forEach(key => {
+      if (!Array.isArray(formattedNFRs[key])) {
+        formattedNFRs[key] = [];
+      } else {
+        // Clean up requirements that might still have category prefixes
+        formattedNFRs[key] = formattedNFRs[key].map((req: string) => {
+          if (typeof req === 'string' && req.includes(':')) {
+            const parts = req.split(':');
+            // Only remove prefix if it matches the current category
+            if (parts[0].trim() === key) {
+              return parts.slice(1).join(':').trim();
+            }
+          }
+          return req;
+        });
+      }
+    });
+  }
+ 
   return {
     "Title": canvas.title?.value || "",
     "Problem Statement": canvas.problemStatement?.value || "",
@@ -201,8 +252,8 @@ function mapCanvasToBackendPayload(canvas: any) {
     "Key Features": Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [],
     "Risks": Array.isArray(canvas.risks?.value) ? canvas.risks.value : [],
     "Assumptions": Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [],
-    "Non Functional Requirements": Array.isArray(canvas.nonFunctionalRequirements?.value) ? canvas.nonFunctionalRequirements.value : [],
-    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null
+    "Non Functional Requirements": formattedNFRs,
+    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null && !Array.isArray(canvas.governance.value)
       ? canvas.governance.value
       : {},
     "Relevant Facts": Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [],
@@ -480,7 +531,8 @@ export function CardArrayEditor({
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
-                  <CardContent className="pt-0 pb-4 px-4">
+                  {/* Make card content scrollable if too tall */}
+                  <CardContent className="pt-0 pb-4 px-4 max-h-64 overflow-y-auto">
                     <div className="grid gap-4">
                       {fields.map((field) => (
                         <CardField
@@ -552,9 +604,9 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-xs text-muted-foreground break-words">
         {field.label}
-        {field.required && <span className="text-destructive ml-1">*</span>}
+        {/* {field.required && <span className="text-destructive ml-1">*</span>} */}
       </Label>
 
       {field.type === "textarea" ? (
@@ -563,7 +615,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          className="min-h-[60px] resize-none text-sm"
+          className="min-h-[60px] resize-none text-sm break-words"
         />
       ) : field.type === "select" && field.options ? (
         <Select
@@ -587,7 +639,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          className="h-9"
+          className="h-9 break-words"
         />
       )}
     </div>

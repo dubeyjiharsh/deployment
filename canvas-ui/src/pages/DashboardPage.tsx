@@ -269,7 +269,7 @@ export function DashboardPage(): React.ReactElement {
             )}
             {filteredCanvases.map((canvas) => (
               <div key={canvas.canvas_id} className="block">
-                <Card className="border cursor-pointer transition-colors hover:bg-muted/30 relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between">
+                <Card className="border relative w-full h-48 min-h-48 max-h-48 flex flex-col justify-between group">
                   <div className="absolute top-2 right-2 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -294,27 +294,60 @@ export function DashboardPage(): React.ReactElement {
                     </DropdownMenu>
                   </div>
                   <CardHeader>
-                    <CardTitle className="text-base text-blue-500 pr-8">
-                      {canvas.title || "Untitled Canvas"}
-                    </CardTitle>
+                    <div
+                      className="flex items-center gap-2 cursor-pointer select-none"
+                      onClick={() => {
+                        sessionStorage.setItem("canvasJson", JSON.stringify(canvas));
+                        sessionStorage.setItem("canvasId", canvas.canvas_id);
+                        navigate(`/canvas-preview/${canvas.canvas_id}`);
+                      }}
+                    >
+                      <CardTitle className="text-base text-blue-500 pr-2 group-hover:underline">
+                        {canvas.title || "Untitled Canvas"}
+                      </CardTitle>
+                      {/* Hand icon appears on hover */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 11V7a5 5 0 0110 0v4m-5 4v4m0 0a2 2 0 01-2-2v-2a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
                     <CardDescription className="line-clamp-2">
                       {canvas.problem_statement || "Canvas ID: " + canvas.canvas_id}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
-                      {canvas.created_at ? `Updated ${formatDistanceToNow(new Date(canvas.created_at), { addSuffix: true })}` : ""}
+                      {canvas.created_at ? (() => {
+                        const now = Date.now();
+                        const created = new Date(canvas.created_at).getTime();
+                        const diffMinutes = Math.floor((now - created) / 60000);
+                        if (diffMinutes < 1) return "Updated just now";
+                        if (diffMinutes === 1) return "Updated about 1 minute ago";
+                        if (diffMinutes < 60) return `Updated about ${diffMinutes} minutes ago`;
+                        const diffHours = Math.floor(diffMinutes / 60);
+                        if (diffHours === 1) return "Updated about 1 hour ago";
+                        if (diffHours < 24) return `Updated about ${diffHours} hours ago`;
+                        const diffDays = Math.floor(diffHours / 24);
+                        if (diffDays === 1) return "Updated 1 day ago";
+                        return `Updated  ${diffDays} days ago`;
+                      })() : ""}
                     </div>
                     <div className="flex gap-4 items-center">
                       <div
-                        className="text-sm text-primary cursor-pointer underline"
+                        className="text-sm text-primary cursor-pointer underline hover:bg-muted/30 rounded px-1"
                         style={{ textDecoration: 'underline' }}
                         onClick={(e) => handleEditCanvas(canvas.canvas_id, e)}
                       >
                         Edit canvas
                       </div>
                       <div
-                        className="text-sm text-primary cursor-pointer underline"
+                        className="text-sm text-primary cursor-pointer underline hover:bg-muted/30 rounded px-1"
                         onClick={() => {
                           sessionStorage.setItem("canvasJson", JSON.stringify(canvas));
                           sessionStorage.setItem("canvasId", canvas.canvas_id);

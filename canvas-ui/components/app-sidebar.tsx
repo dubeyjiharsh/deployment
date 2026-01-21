@@ -4,7 +4,7 @@ import * as React from "react"
 import {
   IconDashboard,
   IconCirclePlusFilled,
-  IconUsers,
+  IconSettings,
 } from "@tabler/icons-react"
 import { API_ENDPOINTS } from '@/config/api';
 
@@ -22,31 +22,53 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { isProjectAdmin } from "@/src/lib/auth"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useHashPath()
+  const [isAdmin, setIsAdmin] = React.useState(false)
 
-  const user = {
-    name: "Demo User",
-    email: "demo@example.com",
-    avatar: undefined,
-  }
+  // Check if user is project admin
+  React.useEffect(() => {
+    setIsAdmin(isProjectAdmin())
+  }, [])
 
-  const navMainItems = [
-    {
-      title: "Create Canvas",
-      url: "/canvas/create",
-      icon: IconCirclePlusFilled,
-    },
-    // Removed User Management
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: IconDashboard,
-      
-    },
-  ]
+  // Updated the user object to fetch dynamic user details from localStorage
+  const user = React.useMemo(() => {
+    const userDetails = JSON.parse(localStorage.getItem("user-info") || "{}") || {};
+    return {
+      name: userDetails.first_name + " " + userDetails.last_name || "Unknown User",
+      email: userDetails.email_id || "unknown@example.com",
+      avatar: userDetails.avatar || undefined,
+    };
+  }, []);
 
+  // Build navigation items based on user role
+  const navMainItems = React.useMemo(() => {
+    const items = [
+      {
+        title: "Dashboard",
+        url: "/",
+        icon: IconDashboard,
+      },
+      {
+        title: "Create Canvas",
+        url: "/canvas/create",
+        icon: IconCirclePlusFilled,
+      },
+    ]
+
+    // Add Configure option only for Project Admins
+    if (isAdmin) {
+      items.push({
+        title: "Configure",
+        url: "/admin-configure",
+        icon: IconSettings,
+      })
+    }
+
+    return items
+  }, [isAdmin])
 
   // Live chat/canvas history
   const [canvases, setCanvases] = React.useState<any[]>([]);

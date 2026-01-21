@@ -6,8 +6,39 @@ import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
 import { getToken } from "@/src/lib/auth";
- 
+import { MarkdownContent } from "./MarkdownContent";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+function toMarkdownString(content: unknown): string {
+  if (typeof content === "string") return content;
 
+  // If backend sometimes sends: { text: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "text" in content &&
+    typeof (content as any).text === "string"
+  ) {
+    return (content as any).text;
+  }
+
+  // If backend sometimes sends: { content: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "content" in content &&
+    typeof (content as any).content === "string"
+  ) {
+    return (content as any).content;
+  }
+
+  // Fallback: show something readable (but not JSON.stringify spam)
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
+}
+ 
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
   const [files, setFiles] = React.useState<File[]>([]);
@@ -17,13 +48,13 @@ export function CreateCanvasPage(): React.ReactElement {
   const [ideaError, setIdeaError] = React.useState<string | null>(null);
   const [showPreviewAlert, setShowPreviewAlert] = React.useState(false);
   const [errorMessages, setErrorMessages] = React.useState<string[]>([]);
+  
 
   const initialized = React.useRef(false);
  
   React.useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-
     const initPage = async () => {
       const isReturning = sessionStorage.getItem("isReturningFromPreview") === "true";
       const isEditing = sessionStorage.getItem("isEditingCanvas") === "true";
@@ -44,10 +75,17 @@ export function CreateCanvasPage(): React.ReactElement {
           
           const history = response.data.history;
           if (Array.isArray(history)) {
-            const mapped = history.map((m: any) => ({
-              role: m.role || "assistant",
-              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-            }));
+            const mapped = history.map((m: any) => {
+              let content = toMarkdownString(m.content);
+              // Add "Click Here" link to preview page if not already present
+              if (typeof canvasId === "string" && content) {
+                content += `\n\n[Click Here](/canvas-preview/${encodeURIComponent(canvasId)})`;
+              }
+              return {
+                role: m.role || "assistant",
+                content,
+              };
+            });
             setChat(mapped);
             sessionStorage.setItem("chatState", JSON.stringify(mapped));
           }
@@ -123,6 +161,18 @@ export function CreateCanvasPage(): React.ReactElement {
 
     newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
 
+    // Enforce maxFiles limit
+    if (files.length + newFiles.length > maxFiles) {
+      const allowedCount = Math.max(0, maxFiles - files.length);
+      if (allowedCount > 0) {
+        newFiles = newFiles.slice(0, allowedCount);
+        newErrors.push(`You can only upload up to ${maxFiles} files. Some files were not added.`);
+      } else {
+        newFiles = [];
+        newErrors.push(`You can only upload up to ${maxFiles} files.`);
+      }
+    }
+
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
       setShowPreviewAlert(false);
@@ -140,7 +190,7 @@ export function CreateCanvasPage(): React.ReactElement {
       setShowPreviewAlert(false);
     }
     if (value.length < 10) {
-      setIdeaError("Please enter at least 10 characters before sending.");
+      setIdeaError("minimum 10 characters are required");
     } else {
       setIdeaError(null);
     }
@@ -148,7 +198,7 @@ export function CreateCanvasPage(): React.ReactElement {
  
   const handleSubmit = async () => {
     if (!idea || idea.length < 10 || !canvasId) {
-      setIdeaError("Please enter at least 10 characters.");
+      setIdeaError("minimum 10 characters are required");
       return;
     }
     const userMsg = { role: "user", content: idea };
@@ -171,14 +221,29 @@ export function CreateCanvasPage(): React.ReactElement {
         }
       );
 
-      const history = response.data.conversation_history;
-      if (Array.isArray(history)) {
-        const mapped = history.map((m: any) => ({
-          role: m.role || "assistant",
-          content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-        }));
-        setChat(mapped);
-        sessionStorage.setItem("chatState", JSON.stringify(mapped));
+      // Show chat_response in chat UI
+      const chatResponse = response.data.chat_response;
+      if (chatResponse) {
+        setChat((prev) => [
+          ...prev,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]);
+        sessionStorage.setItem("chatState", JSON.stringify([
+          ...chat,
+          userMsg,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]));
+      } else {
+        // fallback to conversation_history if present
+        const history = response.data.conversation_history;
+        if (Array.isArray(history)) {
+          const mapped = history.map((m: any) => ({
+            role: m.role || "assistant",
+            content: toMarkdownString(m.content),
+          }));
+          setChat(mapped);
+          sessionStorage.setItem("chatState", JSON.stringify(mapped));
+        }
       }
       if (response.data?.canvas_json) {
         sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
@@ -241,7 +306,24 @@ export function CreateCanvasPage(): React.ReactElement {
             {chat.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <>
+                      <MarkdownContent content={msg.content} />
+                      {canvasId && (
+                        <div className="mt-2 text-xs">
+                            <button
+                              type="button"
+                              className="text-blue-600 underline hover:text-blue-800 cursor-pointer bg-transparent border-none p-0"
+                              onClick={() => navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`)}
+                            >
+                              Click Here to preview this canvas
+                            </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -275,7 +357,11 @@ export function CreateCanvasPage(): React.ReactElement {
                 <tbody>
                   {files.map((file, idx) => (
                     <tr key={file.name + file.size} className="border-b last:border-b-0">
-                      <td className="py-1">{file.name}</td>
+                      <td className="py-1 max-w-[180px] truncate" title={file.name} style={{maxWidth: '180px'}}>
+                        {file.name.length > 20
+                          ? `${file.name.slice(0, 15)}...`
+                          : file.name}
+                      </td>
                       <td className="py-1">{file.type === "application/pdf" ? "PDF" : "DOCX"}</td>
                       <td className="py-1">{(file.size / 1024).toFixed(2)} KB</td>
                       <td className="py-1">
@@ -292,26 +378,29 @@ export function CreateCanvasPage(): React.ReactElement {
               </table>
             </div>
           )}
-          <div className="flex items-start w-full gap-2">
-            <div className="flex-1 min-w-0 relative">
-              <Textarea
-                value={idea}
-                onChange={(e) => {
-                  if (e.target.value.length <= 1000) setIdea(e.target.value);
-                }}
-                maxLength={1000}
-                placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-36"
-                disabled={isLoading}
-                minLength={10}
-                aria-invalid={!!ideaError}
-              />
-              {/* All three buttons in a row, right-aligned */}
-              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex flex-row items-center gap-2 z-10">
+          <div className="flex items-start w-full gap-2 relative">
+            <div className="flex-1 min-w-0">
+              <Tooltip open={idea.length > 0 && idea.length < 10}>
+                <TooltipTrigger asChild>
+                  <Textarea
+                    value={idea}
+                    onChange={(e) => setIdea(e.target.value)}
+                    placeholder="Type your message..."
+                    className="bg-white h-20 w-full pr-25 border border-gray-300 focus:border-red-500 focus:ring-red-500"
+                    disabled={isLoading}
+                    aria-invalid={!!ideaError}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-red-600 text-white">
+                  minimum 10 characters are required
+                </TooltipContent>
+              </Tooltip>
+              <div className="flex flex-row items-center gap-2 absolute top-1/2 right-3 -translate-y-1/2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
                   aria-label="Attach file"
+                  //style={{ marginRight: '8px' }}
                 >
                   <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -322,6 +411,7 @@ export function CreateCanvasPage(): React.ReactElement {
                   onClick={handleSubmit}
                   disabled={isLoading || !idea || idea.length < 10}
                   aria-disabled={isLoading || !idea || idea.length < 10}
+                  style={{ marginRight: '8px' }}
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -341,19 +431,24 @@ export function CreateCanvasPage(): React.ReactElement {
               {ideaError && (
                 <div className="text-red-500 text-xs mt-1">{ideaError}</div>
               )}
-              <div className="text-xs text-gray-400 select-none mt-1">
-                {idea.length}/1000
-              </div>
+                {/* Character count removed as there is no limit */}
             </div>
-            {/* Preview button outside the input box */}
-            <button
-              className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-              onClick={handlePreview}
-              disabled={chat.length === 0}
-              aria-disabled={chat.length === 0}
-            >
-              <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1 absolute right-0 top-1/2 -translate-y-1/2"
+                  style={{ right: '-60px' }}
+                  onClick={handlePreview}
+                  disabled={chat.length === 0 || isLoading}
+                  aria-disabled={chat.length === 0 || isLoading}
+                >
+                  <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                View the generated Business Canvas
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

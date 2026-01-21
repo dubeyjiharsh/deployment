@@ -36,10 +36,14 @@
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cross-spawn": "^7.0.5",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.22",
     "keycloak-js": "^26.2.2",
+<<<<<<< HEAD
     "lodash": "^4.17.21",
+=======
+>>>>>>> dev-fe
     "lucide-react": "^0.545.0",
     "mermaid": "^11.12.0",
     "nanoid": "^5.1.6",
@@ -49,17 +53,22 @@
     "react-day-picker": "^9.12.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.11.0",
+    "react-router-dom": "^7.12.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tar": "^7.5.3",
     "vaul": "^1.1.2",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+<<<<<<< HEAD
     "@types/node": "^20",
+=======
+    "@types/node": "^20.19.27",
+>>>>>>> dev-fe
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.2",
@@ -74,5 +83,6 @@
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "overrides": {}
 }
