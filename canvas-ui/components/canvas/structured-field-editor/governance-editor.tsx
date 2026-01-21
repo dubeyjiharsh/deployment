@@ -27,7 +27,8 @@ import type { StructuredFieldEditorProps } from "./index";
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from "sonner";
  
-type GovernanceCategory = "approvers" | "reviewers" | "requirementLeads";
+// type GovernanceCategory = "approvers" | "reviewers" | "requirementLeads";
+type GovernanceCategory = "approvers" | "reviewers";
  
 /**
 * Normalizes value to GovernanceValue shape
@@ -42,12 +43,13 @@ function normalizeGovernance(value: unknown): GovernanceValue {
       reviewers: Array.isArray(v.reviewers)
         ? v.reviewers.map(normalizeGovPerson)
         : [],
-      requirementLeads: Array.isArray(v.requirementLeads)
-        ? v.requirementLeads.map(normalizeGovPerson)
-        : [],
+      // requirementLeads: Array.isArray(v.requirementLeads)
+        // ? v.requirementLeads.map(normalizeGovPerson)
+        // : [],
     };
   }
-  return { approvers: [], reviewers: [], requirementLeads: [] };
+  // return { approvers: [], reviewers: [], requirementLeads: [] };
+  return { approvers: [], reviewers: []};
 }
  
 // Helper function from CanvasPreviewPage
@@ -182,16 +184,16 @@ function normalizeGovPerson(p: unknown): GovernancePersonValue {
   if (typeof p === "object" && p !== null) {
     const person = p as Record<string, unknown>;
     return {
-      role: String(person.role || ""),
       name: String(person.name || ""),
+      role: String(person.role || ""),
       function: String(person.function || ""),
     };
   }
-  return { role: "", name: "", function: "" };
+  return { name: "", role: "",  function: "" };
 }
  
 function createEmptyPerson(): GovernancePersonValue {
-  return { role: "", name: "", function: "" };
+  return { name: "", role: "", function: "" };
 }
  
 export function GovernanceEditor({
@@ -206,7 +208,8 @@ export function GovernanceEditor({
   const governance = React.useMemo(() => normalizeGovernance(value), [value]);
  
   const [expandedCategories, setExpandedCategories] = React.useState<Set<GovernanceCategory>>(
-     new Set(["approvers", "reviewers", "requirementLeads"])
+    //  new Set(["approvers", "reviewers", "requirementLeads"])
+    new Set(["approvers", "reviewers"])
   );
  
   const toggleCategory = (category: GovernanceCategory) => {
@@ -333,7 +336,8 @@ export function GovernanceEditor({
  
  
  
-  const categories: GovernanceCategory[] = ["approvers", "reviewers", "requirementLeads"];
+  // const categories: GovernanceCategory[] = ["approvers", "reviewers", "requirementLeads"];
+    const categories: GovernanceCategory[] = ["approvers", "reviewers"];
  
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -406,8 +410,8 @@ export function GovernanceEditor({
                         ? "Add Approver"
                         : category === "reviewers"
                         ? "Add Reviewer"
-                        : category === "requirementLeads"
-                        ? "Add Requirement Lead"
+                        // : category === "requirementLeads"
+                        // ? "Add Requirement Lead"
                         : ""}
                     </Button>
                   </div>
@@ -492,27 +496,27 @@ function GovernancePersonCard({
         {/* Form fields */}
         <div className="flex-1 space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor={`role-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.role}
+            <Label htmlFor={`name-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.name}
             </Label>
             <Input
-              id={`role-${index}`}
-              value={person.role}
-              onChange={(e) => onChange({ role: e.target.value })}
-              placeholder="e.g., Digital Product Director"
+              id={`name-${index}`}
+              value={person.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="No Names yet. Add one below"
               className="h-9"
             />
           </div>
  
           <div className="space-y-1.5">
-            <Label htmlFor={`name-${index}`} className="text-xs text-muted-foreground">
-              {GOVERNANCE_PERSON_FIELD_LABELS.name}
+            <Label htmlFor={`role-${index}`} className="text-xs text-muted-foreground">
+              {GOVERNANCE_PERSON_FIELD_LABELS.role}
             </Label>
             <Textarea
-              id={`name-${index}`}
-              value={person.name}
-              onChange={(e) => onChange({ name: e.target.value })}
-              placeholder="No Names yet. Add one below"
+              id={`role-${index}`}
+              value={person.role}
+              onChange={(e) => onChange({ role: e.target.value })}
+              placeholder="No Roles yet. Add one below"
               className="min-h-[50px] resize-none text-sm"
             />
           </div>

@@ -606,7 +606,7 @@ function CardField({ field, value, onChange, itemIndex }: CardFieldProps): React
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground break-words">
         {field.label}
-        {field.required && <span className="text-destructive ml-1">*</span>}
+        {/* {field.required && <span className="text-destructive ml-1">*</span>} */}
       </Label>
 
       {field.type === "textarea" ? (
