@@ -39,7 +39,7 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 # Nginx "unprivileged" image runs as a non-root user by default
 # and avoids shipping npm entirely (removes the tar@6.2.1 issue from npm CLI deps).
-FROM nginxinc/nginx-unprivileged:stable-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:alpine3.22@sha256:062042031264627f065dbe8e16a2b54ec9a12757843c2d956e65623e650a1142 AS runtime
 
 # Patch OS packages in runtime image too (apk equivalent of apt upgrade)
 # RUN apk update && apk upgrade --no-cache
@@ -76,8 +76,3 @@ EXPOSE 3001
 # nginx-unprivileged already runs as non-root, so no USER directive is needed.
 # Start Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]
- 
-
-
-
-
