@@ -18,7 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import {
   NFR_CATEGORY_LABELS,
-  SCOPE_CATEGORY_LABELS,
+  // SCOPE_CATEGORY_LABELS,
   nfrCategoryKeys,
 } from "@/lib/validators/structured-field-schemas";
 import type { StructuredFieldEditorProps } from "./index";
@@ -44,11 +44,11 @@ function getCategoryConfig(fieldKey: string): CategoryConfig[] {
         label: NFR_CATEGORY_LABELS[key],
       }));
 
-    case "scopeDefinition":
-      return [
-        { key: "inScope", label: SCOPE_CATEGORY_LABELS.inScope },
-        { key: "outOfScope", label: SCOPE_CATEGORY_LABELS.outOfScope },
-      ];
+    // case "scopeDefinition":
+    //   return [
+    //     { key: "inScope", label: SCOPE_CATEGORY_LABELS.inScope },
+    //     { key: "outOfScope", label: SCOPE_CATEGORY_LABELS.outOfScope },
+    //   ];
 
     default:
       // For unknown objects, use the keys as labels
@@ -106,24 +106,65 @@ function transformFieldsToCanvas(fields: any) {
     nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
     useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
     governance: makeField(fields.Governance || fields.governance || {}),
-    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevantFacts)),
+    relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevant_facts)),
     createdAt: fields.created_at || fields.createdAt || new Date().toISOString(),
     updatedAt: fields.updated_at || fields.updatedAt || new Date().toISOString(),
   };
 }
 
+// Converts the frontend canvas object to the backend payload format (handles NFR and Governance/Relevant Facts)
 function mapCanvasToBackendPayload(canvas: any) {
-  const nfrRaw = canvas.nonFunctionalRequirements?.value || {};
-  const formattedNFRs = Object.entries(nfrRaw).flatMap(([category, requirements]) => {
-    if (Array.isArray(requirements)) {
-      return requirements.map(req => ({
-        category: category,
-        requirement: typeof req === 'string' ? req : JSON.stringify(req)
-      }));
-    }
-    return [];
-  });
-
+  // Get the NFR value - it should already be in the correct categorized format
+  const nfrValue = canvas.nonFunctionalRequirements?.value || {};
+  
+  // Ensure NFRs are in the correct object format with categories as keys and arrays as values
+  let formattedNFRs: any = {};
+  
+  if (Array.isArray(nfrValue)) {
+    // If it's an array, convert it to categorized format
+    nfrValue.forEach((item: any) => {
+      if (typeof item === 'string') {
+        // Check if the string has a category prefix (e.g., "Performance & Scalability: ...")
+        const colonIndex = item.indexOf(':');
+        if (colonIndex > 0) {
+          const category = item.substring(0, colonIndex).trim();
+          const requirement = item.substring(colonIndex + 1).trim();
+          if (!formattedNFRs[category]) formattedNFRs[category] = [];
+          formattedNFRs[category].push(requirement);
+        } else {
+          // No category prefix, put it in "General"
+          if (!formattedNFRs["General"]) formattedNFRs["General"] = [];
+          formattedNFRs["General"].push(item);
+        }
+      } else if (item.category && item.requirement) {
+        // If it has category and requirement properties
+        if (!formattedNFRs[item.category]) formattedNFRs[item.category] = [];
+        formattedNFRs[item.category].push(item.requirement);
+      }
+    });
+  } else if (typeof nfrValue === 'object' && nfrValue !== null) {
+    // If it's already an object, use it directly (ensuring arrays)
+    formattedNFRs = nfrValue;
+    // Ensure all values are arrays and filter out any that already have category prefixes
+    Object.keys(formattedNFRs).forEach(key => {
+      if (!Array.isArray(formattedNFRs[key])) {
+        formattedNFRs[key] = [];
+      } else {
+        // Clean up requirements that might still have category prefixes
+        formattedNFRs[key] = formattedNFRs[key].map((req: string) => {
+          if (typeof req === 'string' && req.includes(':')) {
+            const parts = req.split(':');
+            // Only remove prefix if it matches the current category
+            if (parts[0].trim() === key) {
+              return parts.slice(1).join(':').trim();
+            }
+          }
+          return req;
+        });
+      }
+    });
+  }
+ 
   return {
     "Title": canvas.title?.value || "",
     "Problem Statement": canvas.problemStatement?.value || "",
@@ -133,8 +174,8 @@ function mapCanvasToBackendPayload(canvas: any) {
     "Key Features": Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [],
     "Risks": Array.isArray(canvas.risks?.value) ? canvas.risks.value : [],
     "Assumptions": Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [],
-    "Non Functional Requirements": Array.isArray(canvas.nonFunctionalRequirements?.value) ? canvas.nonFunctionalRequirements.value : [],
-    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null
+    "Non Functional Requirements": formattedNFRs,
+    "Governance": typeof canvas.governance?.value === 'object' && canvas.governance?.value !== null && !Array.isArray(canvas.governance.value)
       ? canvas.governance.value
       : {},
     "Relevant Facts": Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [],
@@ -335,7 +376,8 @@ export function CategoryListEditor({
               </CollapsibleTrigger>
 
               <CollapsibleContent>
-                <CardContent className="pt-0 pb-4 px-4">
+                {/* Make card content scrollable if too tall */}
+                <CardContent className="pt-0 pb-4 px-4 max-h-64 overflow-y-auto">
                   <div className="space-y-2">
                     {/* Existing items */}
                     {items.map((item, index) => (
@@ -349,6 +391,7 @@ export function CategoryListEditor({
                         onFinishEdit={() => setEditingItem(null)}
                         onChange={(newText) => handleUpdateItem(key, index, newText)}
                         onDelete={() => handleDeleteItem(key, index)}
+                        textClassName="break-words"
                       />
                     ))}
 
@@ -406,6 +449,7 @@ interface CategoryItemProps {
   onFinishEdit: () => void;
   onChange: (newText: string) => void;
   onDelete: () => void;
+  textClassName?: string;
 }
 
 function CategoryItem({
@@ -415,6 +459,7 @@ function CategoryItem({
   onFinishEdit,
   onChange,
   onDelete,
+  textClassName,
 }: CategoryItemProps): React.ReactElement {
   const [editText, setEditText] = React.useState(text);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -480,7 +525,10 @@ function CategoryItem({
       </div>
 
       <div
-        className="flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30"
+        className={cn(
+          "flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30 break-words",
+          textClassName || ""
+        )}
         onClick={onStartEdit}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

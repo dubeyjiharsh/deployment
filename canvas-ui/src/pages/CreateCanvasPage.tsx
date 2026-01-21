@@ -6,20 +6,55 @@ import axios from "axios";
 import { navigate } from "@/lib/router";
 import { API_ENDPOINTS } from '@/config/api';
 import { getToken } from "@/src/lib/auth";
+import { MarkdownContent } from "./MarkdownContent";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+function toMarkdownString(content: unknown): string {
+  if (typeof content === "string") return content;
+
+  // If backend sometimes sends: { text: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "text" in content &&
+    typeof (content as any).text === "string"
+  ) {
+    return (content as any).text;
+  }
+
+  // If backend sometimes sends: { content: "## hello" }
+  if (
+    content &&
+    typeof content === "object" &&
+    "content" in content &&
+    typeof (content as any).content === "string"
+  ) {
+    return (content as any).content;
+  }
+
+  // Fallback: show something readable (but not JSON.stringify spam)
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
+}
  
 export function CreateCanvasPage(): React.ReactElement {
   const [idea, setIdea] = React.useState("");
-  const [file, setFile] = React.useState<File | null>(null);
+  const [files, setFiles] = React.useState<File[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [chat, setChat] = React.useState<Array<{role: string, content: string}>>([]);
   const [canvasId, setCanvasId] = React.useState<string | null>(null);
- 
+  const [ideaError, setIdeaError] = React.useState<string | null>(null);
+  const [showPreviewAlert, setShowPreviewAlert] = React.useState(false);
+  const [errorMessages, setErrorMessages] = React.useState<string[]>([]);
+  
+
   const initialized = React.useRef(false);
  
   React.useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-
     const initPage = async () => {
       const isReturning = sessionStorage.getItem("isReturningFromPreview") === "true";
       const isEditing = sessionStorage.getItem("isEditingCanvas") === "true";
@@ -40,10 +75,17 @@ export function CreateCanvasPage(): React.ReactElement {
           
           const history = response.data.history;
           if (Array.isArray(history)) {
-            const mapped = history.map((m: any) => ({
-              role: m.role || "assistant",
-              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-            }));
+            const mapped = history.map((m: any) => {
+              let content = toMarkdownString(m.content);
+              // Add "Click Here" link to preview page if not already present
+              if (typeof canvasId === "string" && content) {
+                content += `\n\n[Click Here](/canvas-preview/${encodeURIComponent(canvasId)})`;
+              }
+              return {
+                role: m.role || "assistant",
+                content,
+              };
+            });
             setChat(mapped);
             sessionStorage.setItem("chatState", JSON.stringify(mapped));
           }
@@ -95,21 +137,79 @@ export function CreateCanvasPage(): React.ReactElement {
     initPage();
   }, []);
  
-  const handleFileUpload = (files: FileList | null) => {
-    if (files && files.length > 0) setFile(files[0]);
+
+  const handleFileUpload = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const allowedTypes = ["application/pdf"];
+    const allowedExtensions = ["pdf"];
+    const maxSizeMB = 5;
+    const maxFiles = 10;
+
+    const newErrors: string[] = [];
+    let newFiles: File[] = Array.from(fileList).filter(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (file.size / (1024 * 1024) > maxSizeMB) {
+        newErrors.push(`File ${file.name} exceeds the maximum size of ${maxSizeMB}MB.`);
+        return false;
+      }
+      if (!allowedTypes.includes(file.type) || !ext || !allowedExtensions.includes(ext)) {
+        newErrors.push(`File ${file.name} is unsupported file type.`);
+        return false;
+      }
+      return true;
+    });
+
+    newFiles = newFiles.filter(file => !files.some(f => f.name === file.name && f.size === file.size));
+
+    // Enforce maxFiles limit
+    if (files.length + newFiles.length > maxFiles) {
+      const allowedCount = Math.max(0, maxFiles - files.length);
+      if (allowedCount > 0) {
+        newFiles = newFiles.slice(0, allowedCount);
+        newErrors.push(`You can only upload up to ${maxFiles} files. Some files were not added.`);
+      } else {
+        newFiles = [];
+        newErrors.push(`You can only upload up to ${maxFiles} files.`);
+      }
+    }
+
+    if (newFiles.length > 0) {
+      setFiles(prev => [...prev, ...newFiles]);
+      setShowPreviewAlert(false);
+      // Ensure notification is triggered only once
+      console.log(`${newFiles.length} file(s) uploaded successfully.`);
+    }
+
+    setErrorMessages(newErrors);
+  };
+
+  const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setIdea(value);
+    if (showPreviewAlert && (value.length > 0 || files.length > 0)) {
+      setShowPreviewAlert(false);
+    }
+    if (value.length < 10) {
+      setIdeaError("minimum 10 characters are required");
+    } else {
+      setIdeaError(null);
+    }
   };
  
   const handleSubmit = async () => {
-    if (!idea || !canvasId) return;
+    if (!idea || idea.length < 10 || !canvasId) {
+      setIdeaError("minimum 10 characters are required");
+      return;
+    }
     const userMsg = { role: "user", content: idea };
     setChat((prev) => [...prev, userMsg]);
     setIsLoading(true);
- 
+
     try {
       const formData = new FormData();
       formData.append("message", idea);
-      if (file) formData.append("files", file);
- 
+      files.forEach(file => formData.append("files", file));
+
       const response = await axios.post(
         API_ENDPOINTS.canvasMessage(canvasId),
         formData,
@@ -120,20 +220,35 @@ export function CreateCanvasPage(): React.ReactElement {
           },
         }
       );
- 
-      const history = response.data.conversation_history;
-      if (Array.isArray(history)) {
-        const mapped = history.map((m: any) => ({
-          role: m.role || "assistant",
-          content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-        }));
-        setChat(mapped);
-        sessionStorage.setItem("chatState", JSON.stringify(mapped));
+
+      // Show chat_response in chat UI
+      const chatResponse = response.data.chat_response;
+      if (chatResponse) {
+        setChat((prev) => [
+          ...prev,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]);
+        sessionStorage.setItem("chatState", JSON.stringify([
+          ...chat,
+          userMsg,
+          { role: "assistant", content: toMarkdownString(chatResponse) }
+        ]));
+      } else {
+        // fallback to conversation_history if present
+        const history = response.data.conversation_history;
+        if (Array.isArray(history)) {
+          const mapped = history.map((m: any) => ({
+            role: m.role || "assistant",
+            content: toMarkdownString(m.content),
+          }));
+          setChat(mapped);
+          sessionStorage.setItem("chatState", JSON.stringify(mapped));
+        }
       }
       if (response.data?.canvas_json) {
         sessionStorage.setItem("canvasJson", JSON.stringify(response.data.canvas_json));
       }
-      setFile(null);
+      setFiles([]);
     } catch (error) {
       console.error("Submit error:", error);
     } finally {
@@ -143,11 +258,32 @@ export function CreateCanvasPage(): React.ReactElement {
   };
  
   const handlePreview = () => {
+    // Block preview if there is no chat history for this canvasId
+    if (chat.length === 0) {
+      setShowPreviewAlert(true);
+      return;
+    }
+    setShowPreviewAlert(false);
     if (!canvasId) return;
     sessionStorage.setItem("chatState", JSON.stringify(chat));
     navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`);
   };
  
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".error-container")) {
+        setErrorMessages([]);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="p-6 flex flex-col w-full max-w-3xl h-[90vh]">
@@ -166,11 +302,28 @@ export function CreateCanvasPage(): React.ReactElement {
               </div>
             </div>
           )}
-          <div className="flex flex-col gap-4 relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent px-1" style={{ flex: 1, minHeight: 0 }}>
+          <div className="flex flex-col gap-4 relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent px-1" style={{ flex: 1, minHeight: 0 }}>
             {chat.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] px-4 py-2 rounded-lg shadow ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <>
+                      <MarkdownContent content={msg.content} />
+                      {canvasId && (
+                        <div className="mt-2 text-xs">
+                            <button
+                              type="button"
+                              className="text-blue-600 underline hover:text-blue-800 cursor-pointer bg-transparent border-none p-0"
+                              onClick={() => navigate(`/canvas-preview/${encodeURIComponent(canvasId)}`)}
+                            >
+                              Click Here to preview this canvas
+                            </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -178,35 +331,87 @@ export function CreateCanvasPage(): React.ReactElement {
         </div>
 
         <div className="w-full max-w-2xl mx-auto p-6 bg-white">
-          {file && (
-             <div className="bg-white rounded-lg p-3 mb-2 flex justify-between items-center border">
-               <span className="text-sm font-medium">{file.name}</span>
-               <button onClick={() => setFile(null)} className="text-red-500">✕</button>
-             </div>
+          {errorMessages.length > 0 && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded error-container">
+              <ul className="list-disc pl-5">
+                {errorMessages.map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </div>
           )}
-          <div className="flex items-center w-full gap-2">
-            <div className="relative flex-grow">
-              <Textarea
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                placeholder="Type your message..."
-                className="bg-white h-20 w-full pr-28"
-                disabled={isLoading}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-2">
+          {showPreviewAlert && (
+            <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center text-sm">Please enter a message or attach a file before previewing.</div>
+          )}
+          {files.length > 0 && (
+            <div className="bg-white rounded-lg p-3 mb-2 border">
+              <table className="w-full text-sm">
+                {/* <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-1">Name</th>
+                    <th className="text-left py-1">Type</th>
+                    <th className="text-left py-1">Size</th>
+                    <th className="text-left py-1">Action</th>
+                  </tr>
+                </thead> */}
+                <tbody>
+                  {files.map((file, idx) => (
+                    <tr key={file.name + file.size} className="border-b last:border-b-0">
+                      <td className="py-1 max-w-[180px] truncate" title={file.name} style={{maxWidth: '180px'}}>
+                        {file.name.length > 20
+                          ? `${file.name.slice(0, 15)}...`
+                          : file.name}
+                      </td>
+                      <td className="py-1">{file.type === "application/pdf" ? "PDF" : "DOCX"}</td>
+                      <td className="py-1">{(file.size / 1024).toFixed(2)} KB</td>
+                      <td className="py-1">
+                        <button className="text-red-500 text-xs" onClick={() => {
+                          setFiles(files.filter((_, i) => i !== idx));
+                          // Reset file input so same file can be uploaded again
+                          const input = document.getElementById('file-input') as HTMLInputElement;
+                          if (input) input.value = "";
+                        }}>Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex items-start w-full gap-2 relative">
+            <div className="flex-1 min-w-0">
+              <Tooltip open={idea.length > 0 && idea.length < 10}>
+                <TooltipTrigger asChild>
+                  <Textarea
+                    value={idea}
+                    onChange={(e) => setIdea(e.target.value)}
+                    placeholder="Type your message..."
+                    className="bg-white h-20 w-full pr-25 border border-gray-300 focus:border-red-500 focus:ring-red-500"
+                    disabled={isLoading}
+                    aria-invalid={!!ideaError}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-red-600 text-white">
+                  minimum 10 characters are required
+                </TooltipContent>
+              </Tooltip>
+              <div className="flex flex-row items-center gap-2 absolute top-1/2 right-3 -translate-y-1/2 z-10">
                 <button
                   className="p-2 bg-white border rounded-full shadow hover:bg-gray-50 transition-colors"
                   onClick={() => document.getElementById('file-input')?.click()}
                   aria-label="Attach file"
+                  //style={{ marginRight: '8px' }}
                 >
                   <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                   </svg>
                 </button>
                 <button
-                  className="p-2 bg-blue-500 rounded-full text-white flex items-center justify-center"
+                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.length < 10 ? 'opacity-50' : 'opacity-100'}`}
                   onClick={handleSubmit}
-                  disabled={isLoading || !idea}
+                  disabled={isLoading || !idea || idea.length < 10}
+                  aria-disabled={isLoading || !idea || idea.length < 10}
+                  style={{ marginRight: '8px' }}
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -214,15 +419,36 @@ export function CreateCanvasPage(): React.ReactElement {
                     "➤"
                   )}
                 </button>
+                <input
+                  id="file-input"
+                  type="file"
+                  style={{ display: "none" }}
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  multiple={true}
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                />
               </div>
-              <input
-                id="file-input" type="file" style={{ display: "none" }}
-                onChange={(e) => handleFileUpload(e.target.files)}
-              />
+              {ideaError && (
+                <div className="text-red-500 text-xs mt-1">{ideaError}</div>
+              )}
+                {/* Character count removed as there is no limit */}
             </div>
-            <button className="p-2 bg-white border rounded-full shadow hover:bg-gray-50" onClick={handlePreview}>
-               <img src="/dist/images/preview.png" alt="Preview" className="h-6 w-6" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex-shrink-0 p-3 bg-white border rounded-full shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed mt-1 absolute right-0 top-1/2 -translate-y-1/2"
+                  style={{ right: '-60px' }}
+                  onClick={handlePreview}
+                  disabled={chat.length === 0 || isLoading}
+                  aria-disabled={chat.length === 0 || isLoading}
+                >
+                  <img src="/images/preview.png" alt="Preview" className="h-6 w-6" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                View the generated Business Canvas
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
