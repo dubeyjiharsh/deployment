@@ -81,31 +81,98 @@ const validateUserWithBackend = async (username: string, authToken: string) => {
 
 // Determine redirect URL based on user role
 const getRedirectUrlByRole = (roleTypeName: string): string => {
-  // Check if user is Project Admin
   if (roleTypeName === "Project Admin") {
-    return "#/admin-configure"; // Redirect to admin configuration
+    return "#/admin-configure";
   }
-  // Default redirect for regular users
-  return "#/"; // Redirect to Dashboard
+  return "#/";
 };
 
-export const initKeycloak = (onAuthenticatedCallback: () => void) => {
+// Helper function to clean OAuth parameters from URL
+const cleanOAuthParams = () => {
+  const hash = window.location.hash;
+  if (hash.includes('state=') || hash.includes('session_state=') || hash.includes('code=') || hash.includes('iss=')) {
+    console.log("Cleaning OAuth params from URL");
+    const cleanHash = hash.split('&')[0].split('?')[0];
+    const targetHash = cleanHash || '#/';
+    window.history.replaceState(null, '', window.location.origin + window.location.pathname + targetHash);
+    return true;
+  }
+  return false;
+};
+
+export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
   // First, check if user is already authenticated via AI Force
   if (isAIForceAuthenticated()) {
-    console.log("User already authenticated via AI Force - skipping Keycloak initialization");
-    setupSessionFromLocalStorage();
-    onAuthenticatedCallback();
-    return;
+    console.log("User already authenticated via AI Force - validating with backend");
+    
+    try {
+      const userInfo = localStorage.getItem("user-info");
+      if (userInfo) {
+        const parsedUserInfo = JSON.parse(userInfo);
+        const username = parsedUserInfo.user_name || parsedUserInfo.user_id;
+        const authToken = parsedUserInfo.auth_token;
+
+        if (username && authToken) {
+          // Validate the AI Force user with backend
+          console.log("Validating AI Force user with backend:", username);
+          const userDetails = await validateUserWithBackend(username, authToken);
+          console.log("AI Force user validation successful:", userDetails);
+
+          // Update user info with fresh data from backend
+          const updatedUserInfo = JSON.stringify({
+            user_id: userDetails.user_id,
+            user_name: userDetails.user_name,
+            role: userDetails.role_type_name,
+            role_id: userDetails.role_id,
+            project_id: userDetails.project_id,
+            org_id: 1,
+            auth_token: authToken,
+            is_super_admin: userDetails.role_type_name === "Super Admin",
+            is_project_admin: userDetails.role_type_name === "Project Admin",
+            email_id: userDetails.email_id,
+            user_type: "platform_user",
+            role_type_id: userDetails.role_id,
+            role_type: userDetails.role_type_name,
+            first_name: userDetails.first_name,
+            last_name: userDetails.last_name,
+            is_active: userDetails.is_active,
+            last_active: userDetails.last_active,
+          });
+          localStorage.setItem("user-info", updatedUserInfo);
+
+          setupSessionFromLocalStorage();
+          cleanOAuthParams();
+          onAuthenticatedCallback();
+          return;
+        }
+      }
+      
+      // If we get here, user info is missing or incomplete
+      throw new Error("Invalid AI Force authentication data");
+      
+    } catch (error) {
+      console.error("AI Force user validation failed:", error);
+      
+      // Clear all authentication state
+      sessionStorage.clear();
+      localStorage.clear();
+      
+      // Show error and redirect to login
+      alert("Session validation failed. Please log in again.");
+      cleanOAuthParams();
+      window.location.hash = '#/login';
+      
+      // Don't call the callback since validation failed
+      return;
+    }
   }
 
   // If not AI Force authenticated, proceed with Keycloak flow
   console.log("No AI Force authentication found - initializing Keycloak");
   
-  // Check if we're returning from a logout
   const urlParams = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
   
-  // Check for logout indicators
   const hasLogoutParam = urlParams.get('fromLogout') === 'true';
   const hasMalformedHash = hash.includes('%2Flogin=') || 
                           hash.includes('/login=') || 
@@ -115,7 +182,6 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
   
   const isPostLogout = hasLogoutParam || hasMalformedHash || hash === '#/logout';
   
-  // Clean up the URL before initialization
   if (hasLogoutParam) {
     urlParams.delete('fromLogout');
     const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + '#/logout';
@@ -127,7 +193,7 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
     window.history.replaceState(null, '', window.location.origin + '/#/logout');
   }
   
-  console.log("Initializing Keycloak, isPostLogout:", isPostLogout, "reason:", hasLogoutParam ? "param" : hasMalformedHash ? "malformed hash" : "none");
+  console.log("Initializing Keycloak, isPostLogout:", isPostLogout);
   
   keycloak
     .init({
@@ -148,7 +214,7 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
         console.log("User authenticated via Keycloak, userId set:", username);
 
         try {
-          // Validate user with backend and get user details
+          // Validate user with backend
           console.log("Validating user with backend:", username);
           const userDetails = await validateUserWithBackend(username, keycloak.token);
           
@@ -167,7 +233,6 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
           
           localStorage.setItem("keycloak", JSON.stringify(true));
 
-          // Store bottom menu items
           const bottomMenuItems = JSON.stringify([
             {
               id: 10,
@@ -193,7 +258,7 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
             role: userDetails.role_type_name,
             role_id: userDetails.role_id,
             project_id: userDetails.project_id,
-            org_id: 1, // You might get this from backend too
+            org_id: 1,
             auth_token: keycloak.token,
             is_super_admin: userDetails.role_type_name === "Super Admin",
             is_project_admin: userDetails.role_type_name === "Project Admin",
@@ -208,32 +273,45 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
           });
           localStorage.setItem("user-info", userInfo);
 
-          // Determine redirect URL based on role
+          // Determine redirect URL based on role from backend
           const redirectUrl = getRedirectUrlByRole(userDetails.role_type_name);
           console.log("Redirecting to:", redirectUrl, "based on role:", userDetails.role_type_name);
           
-          // Clean up OAuth params from URL
-          if (window.location.hash.includes('state=') || window.location.hash.includes('session_state=')) {
-            console.log("Cleaning up OAuth params from URL");
-            window.history.replaceState(null, '', window.location.origin + '/' + redirectUrl);
-          } else {
-            // Set the redirect URL
-            window.location.hash = redirectUrl;
-          }
+          // Clean up OAuth params and redirect
+          cleanOAuthParams();
+          
+          // Set the redirect URL
+          window.location.hash = redirectUrl;
           
           onAuthenticatedCallback();
 
         } catch (error) {
           console.error("Backend validation failed:", error);
+          
+          // Logout from Keycloak to clear the session
+          if (keycloak.token) {
+            try {
+              await keycloak.logout({
+                redirectUri: `${window.location.origin}/`
+              });
+            } catch (logoutError) {
+              console.error("Keycloak logout failed:", logoutError);
+            }
+          }
+          
           // Clear authentication state on validation failure
           sessionStorage.clear();
           localStorage.clear();
           
           // Show error message to user
-          alert("Failed to validate user with backend. Please try logging in again.");
+          alert("User validation failed. You are not authorized to access this application. Please contact your administrator.");
           
-          // Redirect to login or logout page
-          window.location.hash = '#/logout';
+          // Clean OAuth params and redirect to login page
+          cleanOAuthParams();
+          window.location.hash = '#/login';
+          
+          // Don't call the callback since authentication failed
+          return;
         }
         
       } else {
@@ -241,11 +319,10 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
         sessionStorage.removeItem("isAuthenticated");
         console.log("User not authenticated via Keycloak, userId cleared");
         
-        // Clean up OAuth params from URL
-        if (window.location.hash.includes('state=') || window.location.hash.includes('session_state=')) {
-          console.log("Cleaning up OAuth params from URL");
-          const targetHash = isPostLogout ? '#/logout' : '#/';
-          window.history.replaceState(null, '', window.location.origin + '/' + targetHash);
+        cleanOAuthParams();
+        
+        if (isPostLogout) {
+          window.location.hash = '#/logout';
         }
         
         onAuthenticatedCallback();
@@ -254,28 +331,26 @@ export const initKeycloak = (onAuthenticatedCallback: () => void) => {
     .catch((error) => {
       console.error("Keycloak init failed:", error);
       sessionStorage.clear();
+      cleanOAuthParams();
     });
 };
 
 export const doLogin = () => {
   console.log("Redirecting to Keycloak login...");
   keycloak.login({
-    redirectUri: `${window.location.origin}/`
+    redirectUri: `${window.location.origin}/canvas`
   });
 };
 
 export const doLogout = () => {
   console.log("Starting logout process...");
   
-  // Check if user was authenticated via Keycloak or AI Force
   const isKeycloakAuth = localStorage.getItem("keycloak") === "true";
   
-  // Clear all local data first
   sessionStorage.clear();
   localStorage.clear();
   
   if (isKeycloakAuth && keycloak.token) {
-    // Keycloak logout flow
     const logoutRedirectUri = `${window.location.origin}/`;
     const logoutUrl = `${keycloak.authServerUrl}/realms/${keycloak.realm}/protocol/openid-connect/logout`;
     
@@ -297,7 +372,6 @@ export const doLogout = () => {
       window.location.href = fullLogoutUrl;
     }, 100);
   } else {
-    // AI Force logout - just redirect to logout page
     console.log("AI Force logout - redirecting to logout page");
     window.location.hash = '#/logout';
     window.location.reload();
@@ -310,7 +384,6 @@ export const logout = () => {
 };
 
 export const getToken = () => {
-  // First check if AI Force authenticated
   if (isAIForceAuthenticated()) {
     const userInfo = localStorage.getItem("user-info");
     if (userInfo) {
@@ -322,18 +395,15 @@ export const getToken = () => {
       }
     }
   }
-  // Otherwise return Keycloak token
   return keycloak.token;
 };
 
 export const isAuthenticated = () => {
-  // First check AI Force authentication
   if (isAIForceAuthenticated()) {
     console.log("Auth check - AI Force authenticated");
     return true;
   }
   
-  // Otherwise check Keycloak authentication
   const hasToken = !!keycloak.token;
   const hasUserId = !!sessionStorage.getItem("userId");
   const isAuthFlag = sessionStorage.getItem("isAuthenticated") === "true";
@@ -342,11 +412,9 @@ export const isAuthenticated = () => {
 };
 
 export const updateToken = (minValidity = 5) => {
-  // Only update token if using Keycloak
   if (localStorage.getItem("keycloak") === "true") {
     return keycloak.updateToken(minValidity);
   }
-  // For AI Force, return a resolved promise (no token refresh needed)
   return Promise.resolve(true);
 };
 
@@ -374,6 +442,77 @@ export const isProjectAdmin = () => {
 export const isSuperAdmin = () => {
   const userInfo = getUserInfo();
   return userInfo?.is_super_admin === true || userInfo?.role_type === "Super Admin";
+};
+
+// Verify user on page load - validate with backend
+export const verifyUserOnPageLoad = async () => {
+  const userInfo = localStorage.getItem("user-info");
+
+  try {
+    if (userInfo) {
+      const parsedUserInfo = JSON.parse(userInfo);
+      const username = parsedUserInfo.user_name || parsedUserInfo.user_id;
+      const authToken = parsedUserInfo.auth_token;
+
+      if (username && authToken) {
+        console.log("Validating user from backend on page load...");
+        try {
+          const userDetails = await validateUserWithBackend(username, authToken);
+          console.log("User validated successfully from backend:", userDetails);
+          
+          // Update user info with fresh data from backend
+          const updatedUserInfo = JSON.stringify({
+            user_id: userDetails.user_id,
+            user_name: userDetails.user_name,
+            role: userDetails.role_type_name,
+            role_id: userDetails.role_id,
+            project_id: userDetails.project_id,
+            org_id: 1,
+            auth_token: authToken,
+            is_super_admin: userDetails.role_type_name === "Super Admin",
+            is_project_admin: userDetails.role_type_name === "Project Admin",
+            email_id: userDetails.email_id,
+            user_type: "platform_user",
+            role_type_id: userDetails.role_id,
+            role_type: userDetails.role_type_name,
+            first_name: userDetails.first_name,
+            last_name: userDetails.last_name,
+            is_active: userDetails.is_active,
+            last_active: userDetails.last_active,
+          });
+          localStorage.setItem("user-info", updatedUserInfo);
+          
+        } catch (error) {
+          console.error("User validation failed from backend:", error);
+          // Clear session and redirect to Keycloak login on validation failure
+          sessionStorage.clear();
+          localStorage.clear();
+          console.log("Redirecting to Keycloak login...");
+          keycloak.login({
+            redirectUri: `${window.location.origin}/canvas`
+          });
+        }
+      } else {
+        console.warn("Username or auth token missing in user info.");
+        console.log("Redirecting to Keycloak login...");
+        keycloak.login({
+          redirectUri: `${window.location.origin}/canvas`
+        });
+      }
+    } else {
+      console.warn("No user info found in localStorage.");
+      console.log("Redirecting to Keycloak login...");
+      keycloak.login({
+        redirectUri: `${window.location.origin}/canvas`
+      });
+    }
+  } catch (e) {
+    console.error("Unexpected error during user validation:", e);
+    console.log("Redirecting to Keycloak login...");
+    keycloak.login({
+      redirectUri: `${window.location.origin}/canvas`
+    });
+  }
 };
 
 export default keycloak;
