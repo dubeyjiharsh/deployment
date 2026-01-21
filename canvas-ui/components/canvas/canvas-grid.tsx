@@ -324,9 +324,13 @@ function renderValue(value: unknown): React.ReactNode {
             const actor = obj.actor !== undefined ? String(obj.actor) : "—";
             const goal = obj.goal !== undefined ? String(obj.goal) : "—";
             const scenario = obj.scenario !== undefined ? String(obj.scenario) : "—";
+            const useCaseDesc = typeof obj.use_case === 'string' ? obj.use_case : (typeof obj.description === 'string' ? obj.description : "");
             return (
               <div key={idx} className="space-y-1">
-                <div className="font-semibold">Use case {idx + 1}</div>
+                <div className="font-semibold">
+                  {`Use case ${idx + 1}`}
+                  {useCaseDesc ? <span className="font-semibold"> - {useCaseDesc}</span> : null}
+                </div>
                 <ul className="list-disc pl-5 space-y-1">
                   <li className="text-sm leading-relaxed"><span className="font-medium">Actor:</span> {actor}</li>
                   <li className="text-sm leading-relaxed"><span className="font-medium">Goal:</span> {goal}</li>
@@ -628,6 +632,9 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                         <Pencil className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
+
+
+
                     </div>
                     <ScrollArea className="mt-3 flex-1 w-full">
                       {renderGovernanceTables(field.value)}
