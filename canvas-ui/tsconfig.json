@@ -30,7 +30,10 @@
     "hooks/**/*.ts",
     "hooks/**/*.tsx",
     "stores/**/*.ts",
-    "stores/**/*.tsx"
+    "stores/**/*.tsx",
+    "public/**/*.png",
+    "public/**/*.svg"
+
   ],
   "exclude": [
     "node_modules",
