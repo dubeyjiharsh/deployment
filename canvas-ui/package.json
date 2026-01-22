@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.17.23",
-    "@types/node": "^20",
+    "@types/node": "^20.19.30",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.2",

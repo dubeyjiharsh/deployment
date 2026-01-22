@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StructuredFieldEditor } from "@/components/canvas/structured-field-editor";
+import { normalizeStructuredValue } from "@/lib/validators/structured-field-schemas";
+import { mapNfrBackendToFrontend } from "@/components/canvas/structured-field-editor/category-list-editor";
 import { cn } from "@/lib/utils";
 import { DEFAULT_CANVAS_FIELDS } from "@/lib/constants/default-canvas-fields";
 import type { BusinessCanvas, CanvasField, EvidenceItem } from "@/lib/validators/canvas-schema";
@@ -236,7 +238,7 @@ function renderValue(value: unknown): React.ReactNode {
           </ul>
         );
       }
-      // NFR: array of objects with category and requirement, or object with category keys
+      // NFR: objects with category keys, each containing string arrays
       if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr && 'category' in nfr)) {
         // Group by category
         const grouped: Record<string, string[]> = {};
@@ -267,15 +269,18 @@ function renderValue(value: unknown): React.ReactNode {
           return (
             <div className="space-y-4">
               {categories.map(([cat, arr]) => (
-                <div key={cat}>
-                  <div className="font-semibold mb-1">{cat.replace(/:/,"")}</div>
-                  <ul className="list-disc pl-5 space-y-1">
+                <div key={cat} className="">
+                  <div className="flex items-center mb-1">
+                    <span className="text-primary font-bold mr-2">•</span>
+                    <span className="font-bold">{cat.replace(/:/,"")}{":"}</span>
+                  </div>
+                  <ol className="list-decimal pl-8 space-y-1">
                     {(arr as string[])
-                      .flatMap((pt) => pt.split(/\s*,\s*/).filter(Boolean))
+                      .filter(Boolean)
                       .map((pt, idx) => (
                         <li key={idx} className="text-sm leading-relaxed">{pt}</li>
                       ))}
-                  </ul>
+                  </ol>
                 </div>
               ))}
             </div>
@@ -700,6 +705,14 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                   }
                   return [];
                 }
+                // For NFR, map backend keys to frontend keys, then normalize
+                if (activeFieldKey === 'nonFunctionalRequirements') {
+                  let val = draftValue;
+                  if (val && typeof val === 'object' && !Array.isArray(val)) {
+                    val = mapNfrBackendToFrontend(val);
+                  }
+                  return normalizeStructuredValue(activeFieldKey, val);
+                }
                 return draftValue;
               })()}
               onChange={(val) => {
@@ -709,6 +722,11 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                     setDraftValue(val);
                     return;
                   }
+                }
+                // For NFR, always store as normalized object
+                if (activeFieldKey === 'nonFunctionalRequirements') {
+                  setDraftValue(normalizeStructuredValue(activeFieldKey, val));
+                  return;
                 }
                 setDraftValue(val);
               }}

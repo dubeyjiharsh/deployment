@@ -228,7 +228,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     order: 9,
     valueType: "object" as const,
     instructions:
-      'Extract non-functional requirements from documents. Output MUST be an object with these category keys: "performanceRequirements", "usabilityAccessibility", "reliabilityAvailability", "securityPrivacy", "dataQualityIntegration". Each category is an array of requirement strings. The rendered output displays each category as a bold heading followed by bullet points. Categories render as: "**Performance Requirements**", "**Usability & Accessibility**", "**Reliability & Availability**", "**Security & Privacy**", "**Data Quality & Integration**".',
+      'Extract non-functional requirements from documents. Output MUST be an object with these category keys: "performanceRequirements", "dataQualityIntegration", "reliability", "securityCompliancePrivacy". Each category is an array of requirement strings. The rendered output displays each category as a bold heading followed by bullet points. Categories render as: "**Performance & Scalability**", "**Reliability**", "**Security/Compliance/Privacy**", "**Data Quality & Integration**".',
     examples:
       '{"performanceRequirements": ["Mobile page load time must remain under 3 seconds despite video content integration", "Video streaming must support progressive loading with 1-second initial frame display", "System must handle 10x current traffic volume during peak shopping periods"], "usabilityAccessibility": ["Video controls must be accessible via keyboard navigation and screen readers", "Alternative text descriptions required for all video content", "Interface must maintain WCAG 2.1 AA compliance standards"], "reliabilityAvailability": ["99.9% uptime requirement for video streaming infrastructure", "Graceful degradation to static images if video fails to load", "Cross-browser compatibility for Chrome, Safari, Firefox, and Edge"], "securityPrivacy": ["Video content must be protected against unauthorized download", "Customer viewing behavior data must comply with Gap Inc. privacy policies", "CDN must support HTTPS encryption for all video streams"], "dataQualityIntegration": ["Real-time synchronization between product catalog and video content", "Automated content tagging for search and recommendation algorithms", "Video engagement metrics must integrate with existing analytics platforms"]}',
     negativePrompt:
@@ -236,7 +236,7 @@ IMPORTANT: The "metric" should be a brief label (2-5 words), NOT the full succes
     isRequired: false,
     supportsDiagram: false,
     displayStyle: "auto" as const,
-    description: "Non-functional requirements across performance, usability, reliability, security, and data quality",
+    description: "Non-functional requirements across performance & scalability, dataquality & integration ,reliability, security/compliance/privacy",
   },
 
     // === USE CASES ===

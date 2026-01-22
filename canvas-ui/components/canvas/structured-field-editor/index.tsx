@@ -155,7 +155,7 @@ function renderEditor(
       return <CardArrayEditor {...props} fieldKey={props.fieldKey as Exclude<typeof props.fieldKey, string>} />;
 
     case "governance":
-      return <GovernanceEditor {...props} />;
+      return <GovernanceEditor {...props} fieldKey={props.fieldKey as Exclude<typeof props.fieldKey, string>} />;
 
     // case "budget":
     //   return <BudgetEditor {...props} />;
