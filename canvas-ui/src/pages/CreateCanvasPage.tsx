@@ -185,22 +185,24 @@ export function CreateCanvasPage(): React.ReactElement {
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setIdea(value);
-    if (showPreviewAlert && (value.length > 0 || files.length > 0)) {
+    const trimmed = value.trim();
+    if (showPreviewAlert && (trimmed.length > 0 || files.length > 0)) {
       setShowPreviewAlert(false);
     }
-    if (value.length < 10) {
-      setIdeaError("minimum 10 characters are required");
+    if (trimmed.length < 10) {
+      setIdeaError("there should be no blank characters are required");
     } else {
       setIdeaError(null);
     }
   };
  
   const handleSubmit = async () => {
-    if (!idea || idea.length < 10 || !canvasId) {
-      setIdeaError("minimum 10 characters are required");
+    const trimmed = idea.trim();
+    if (!trimmed || trimmed.length < 10 || !canvasId) {
+      setIdeaError("blank characters are not allowed");
       return;
     }
-    const userMsg = { role: "user", content: idea };
+    const userMsg = { role: "user", content: trimmed };
     setChat((prev) => [...prev, userMsg]);
     setIsLoading(true);
 
@@ -383,7 +385,7 @@ export function CreateCanvasPage(): React.ReactElement {
                 <TooltipTrigger asChild>
                   <Textarea
                     value={idea}
-                    onChange={(e) => setIdea(e.target.value)}
+                    onChange={handleIdeaChange}
                     placeholder="Type your message..."
                     className="bg-white h-20 w-full pr-25 border border-gray-300 focus:border-red-500 focus:ring-red-500"
                     disabled={isLoading}
@@ -406,10 +408,10 @@ export function CreateCanvasPage(): React.ReactElement {
                   </svg>
                 </button>
                 <button
-                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea || idea.length < 10 ? 'opacity-50' : 'opacity-100'}`}
+                  className={`p-2 bg-blue-500 rounded-full text-white flex items-center justify-center transition-opacity ${!idea.trim() || idea.trim().length < 10 ? 'opacity-50' : 'opacity-100'}`}
                   onClick={handleSubmit}
-                  disabled={isLoading || !idea || idea.length < 10}
-                  aria-disabled={isLoading || !idea || idea.length < 10}
+                  disabled={isLoading || !idea.trim() || idea.trim().length < 10}
+                  aria-disabled={isLoading || !idea.trim() || idea.trim().length < 10}
                   style={{ marginRight: '8px' }}
                 >
                   {isLoading ? (
