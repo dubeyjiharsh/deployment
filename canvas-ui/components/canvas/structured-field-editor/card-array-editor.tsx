@@ -185,7 +185,6 @@ function transformFieldsToCanvas(fields: any) {
     nfrRaw = organized;
   }
   // Map backend keys to frontend keys
-  const { mapNfrBackendToFrontend } = require("./category-list-editor");
   const nfrFrontend = mapNfrBackendToFrontend(nfrRaw);
   return {
     id: fields.canvas_id || fields.canvasId || "",
@@ -209,7 +208,6 @@ function transformFieldsToCanvas(fields: any) {
 // Converts the frontend canvas object to the backend payload format (handles NFR and Governance/Relevant Facts)
 function mapCanvasToBackendPayload(canvas: any) {
   // Get the NFR value - it should already be in the correct categorized format
-  const { mapNfrFrontendToBackend } = require("./category-list-editor");
   const nfrValue = canvas.nonFunctionalRequirements?.value || {};
   let formattedNFRs: any = {};
   if (typeof nfrValue === 'object' && nfrValue !== null) {
