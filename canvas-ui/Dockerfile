@@ -76,3 +76,8 @@ EXPOSE 3001
 # nginx-unprivileged already runs as non-root, so no USER directive is needed.
 # Start Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]
+ 
+
+
+
+

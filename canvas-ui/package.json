@@ -40,7 +40,6 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.22",
     "keycloak-js": "^26.2.2",
-    "lodash": "^4.17.21",
     "lucide-react": "^0.545.0",
     "mermaid": "^11.12.0",
     "nanoid": "^5.1.6",
