@@ -150,11 +150,12 @@ export const businessCanvasSchema = z.object({
       // Import nfrSchema from structured-field-schemas if not already
       // nfrSchema,
       z.object({
-        performanceRequirements: z.array(z.string()).default([]),
-        usabilityAccessibility: z.array(z.string()).default([]),
-        reliabilityAvailability: z.array(z.string()).default([]),
-        securityPrivacy: z.array(z.string()).default([]),
-        dataQualityIntegration: z.array(z.string()).default([]),
+        performance: z.array(z.string()).default([]),
+        // usabilityAccessibility: z.array(z.string()).default([]),
+        data_quality: z.array(z.string()).default([]),
+        reliability: z.array(z.string()).default([]),
+        security: z.array(z.string()).default([]),
+        
       }).passthrough(),
       z.object({}).passthrough(), // fallback for user config
       z.string(),

@@ -1,3 +1,4 @@
+import { mapNfrBackendToFrontend, mapNfrFrontendToBackend } from "./category-list-editor";
 "use client";
  
 /**
@@ -73,16 +74,20 @@ function transformFieldsToCanvas(fields: any) {
     return arr.map((it) => parseJsonIfString(it));
   };
  
-  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
-  const organizedNFRs: any = {};
+  let nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || {};
   if (Array.isArray(nfrRaw)) {
+    // legacy array format, try to convert
+    const organized: Record<string, string[]> = {};
     nfrRaw.forEach((item: any) => {
       const cat = item.category || "General";
       const req = item.requirement || "";
-      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
-      organizedNFRs[cat].push(req);
+      if (!organized[cat]) organized[cat] = [];
+      organized[cat].push(req);
     });
+    nfrRaw = organized;
   }
+  // Map backend keys to frontend keys
+  const nfrFrontend = mapNfrBackendToFrontend(nfrRaw);
  
   let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
   let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
@@ -99,7 +104,7 @@ function transformFieldsToCanvas(fields: any) {
     keyFeatures: makeField(parseArray(fields["Key Features"] || fields.key_features)),
     risks: makeField(parseArray(fields.Risks || fields.risks)),
     assumptions: makeField(parseArray(fields.Assumptions || fields.assumptions)),
-    nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
+    nonFunctionalRequirements: makeField(nfrFrontend),
     useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
     governance: makeField(fields.Governance || fields.governance || {}),
     relevantFacts: makeField(parseArray(fields.relevantFacts || fields.relevant_facts)),
@@ -112,55 +117,12 @@ function transformFieldsToCanvas(fields: any) {
 function mapCanvasToBackendPayload(canvas: any) {
   // Get the NFR value - it should already be in the correct categorized format
   const nfrValue = canvas.nonFunctionalRequirements?.value || {};
-  
-  // Ensure NFRs are in the correct object format with categories as keys and arrays as values
   let formattedNFRs: any = {};
-  
-  if (Array.isArray(nfrValue)) {
-    // If it's an array, convert it to categorized format
-    nfrValue.forEach((item: any) => {
-      if (typeof item === 'string') {
-        // Check if the string has a category prefix (e.g., "Performance & Scalability: ...")
-        const colonIndex = item.indexOf(':');
-        if (colonIndex > 0) {
-          const category = item.substring(0, colonIndex).trim();
-          const requirement = item.substring(colonIndex + 1).trim();
-          if (!formattedNFRs[category]) formattedNFRs[category] = [];
-          formattedNFRs[category].push(requirement);
-        } else {
-          // No category prefix, put it in "General"
-          if (!formattedNFRs["General"]) formattedNFRs["General"] = [];
-          formattedNFRs["General"].push(item);
-        }
-      } else if (item.category && item.requirement) {
-        // If it has category and requirement properties
-        if (!formattedNFRs[item.category]) formattedNFRs[item.category] = [];
-        formattedNFRs[item.category].push(item.requirement);
-      }
-    });
-  } else if (typeof nfrValue === 'object' && nfrValue !== null) {
-    // If it's already an object, use it directly (ensuring arrays)
+  if (typeof nfrValue === 'object' && nfrValue !== null) {
+    formattedNFRs = mapNfrFrontendToBackend(nfrValue);
+  } else {
     formattedNFRs = nfrValue;
-    // Ensure all values are arrays and filter out any that already have category prefixes
-    Object.keys(formattedNFRs).forEach(key => {
-      if (!Array.isArray(formattedNFRs[key])) {
-        formattedNFRs[key] = [];
-      } else {
-        // Clean up requirements that might still have category prefixes
-        formattedNFRs[key] = formattedNFRs[key].map((req: string) => {
-          if (typeof req === 'string' && req.includes(':')) {
-            const parts = req.split(':');
-            // Only remove prefix if it matches the current category
-            if (parts[0].trim() === key) {
-              return parts.slice(1).join(':').trim();
-            }
-          }
-          return req;
-        });
-      }
-    });
   }
- 
   return {
     "Title": canvas.title?.value || "",
     "Problem Statement": canvas.problemStatement?.value || "",

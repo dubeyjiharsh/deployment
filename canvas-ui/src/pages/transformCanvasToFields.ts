@@ -1,4 +1,5 @@
 // Converts the canvas object back to the backend JSON format expected by the API
+import { mapNfrFrontendToBackend } from "@/components/canvas/structured-field-editor/category-list-editor";
 export function transformCanvasToFields(canvas: any): any {
   if (!canvas) return {};
   const fields: any = {};
@@ -12,7 +13,7 @@ export function transformCanvasToFields(canvas: any): any {
   fields.keyFeatures = Array.isArray(canvas.keyFeatures?.value) ? canvas.keyFeatures.value : [];
   fields.risks = Array.isArray(canvas.risks?.value) ? canvas.risks.value : [];
   fields.assumptions = Array.isArray(canvas.assumptions?.value) ? canvas.assumptions.value : [];
-  fields.nonFunctionalRequirements = canvas.nonFunctionalRequirements?.value || {};
+  fields.nonFunctionalRequirements = mapNfrFrontendToBackend(canvas.nonFunctionalRequirements?.value || {});
   fields.relevantFacts = Array.isArray(canvas.relevantFacts?.value) ? canvas.relevantFacts.value : [];
   fields.useCases = Array.isArray(canvas.useCases?.value) ? canvas.useCases.value : [];
   fields.governance = canvas.governance?.value || {};
@@ -21,3 +22,4 @@ export function transformCanvasToFields(canvas: any): any {
   // Add any other fields as needed
   return fields;
 }
+
