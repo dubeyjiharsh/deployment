@@ -1,3 +1,4 @@
+
 services:
   canvas-be:
     image: canvas-be:latest
@@ -7,11 +8,14 @@ services:
       dockerfile: Dockerfile
 
     ports:
-      - "8030:8010"
+      - "${HOST_PORT:-8000}:${CONTAINER_PORT:-8000}"
 
     restart: always
 
     environment:
+      # General configuration
+      PORT: ${CONTAINER_PORT:-8000}
+      
       # PostgreSQL database configuration
       POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -28,3 +32,8 @@ services:
       BAO_READ_SECRET_ID: ${BAO_READ_SECRET_ID}
       BAO_WRITE_ROLE_ID: ${BAO_WRITE_ROLE_ID}
       BAO_WRITE_SECRET_ID: ${BAO_WRITE_SECRET_ID}
+
+      # AI Force Endpoints
+      AIFORCE_PMS: ${AIFORCE_PMS}
+      AIFORCE_GCS: ${AIFORCE_GCS}
+      AIFORCE_HEALTH_CHECK: ${AIFORCE_HEALTH_CHECK}

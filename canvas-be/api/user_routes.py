@@ -25,7 +25,8 @@ def validate_user(user_id: str):
 			raise HTTPException(status_code=503, detail="AI Force Platform Management services are down.")
 
 		# validate user
-		response = requests.get("https://aiforce.hcltech.com/pms/users/list_user", params=payload, headers=headers)
+		url = settings.AIFORCE_PMS+"/users/list_user"
+		response = requests.get(url=url, params=payload, headers=headers)
 		if response.status_code == 403:
 			raise HTTPException(status_code=403, detail="Invalid token")
 		elif response.status_code == 401:

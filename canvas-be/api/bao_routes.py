@@ -2,10 +2,13 @@ from fastapi import APIRouter, HTTPException
 from utils.aiforce_utils import check_aiforce_health
 from keys.bao_store import write_bao_secret
 from services.responses_service import ResponsesService
-from models.schemas import OpenBAOAIForceLLMConfig, OpenBAOAIForceBearerTokenConfig
+from config import settings
+from models.schemas import OpenBAOAIForceLLMConfig, OpenBAOAIForceBearerTokenConfig, OpenBAOAzureLLMConfig
+from openai import OpenAI
 from typing import Dict, Any
 from services.file_service import FileService
 import logging, requests
+import openai
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/openbao", tags=["OpenBao Secret Management"])
@@ -32,11 +35,17 @@ async def configure_aiforce(secret_data: OpenBAOAIForceBearerTokenConfig):
             )
         
         # check validity of token via AI Force GCS
-        response = requests.get("https://aiforce.hcltech.com/gcs/register/protected-resource", headers=headers)
-        if response.status_code != 200:
+        url = settings.AIFORCE_GCS+"/register/protected-resource"
+        response = requests.get(url=url, headers=headers)
+        if response.status_code == 401:
             raise HTTPException(
                 status_code=401,
-                detail="Invalid AI Force bearer token."
+                detail="Expired token."
+            )
+        elif response.status_code == 403:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid token."
             )
 
         # make secret data JSON serializable
@@ -72,9 +81,32 @@ async def configure_llm(secret_data: OpenBAOAIForceLLMConfig):
     Configure Azure OpenAI API configuration in OpenBAO
     '''
     try:
+        # Unpack union root
+        config = secret_data.root
+
+        # Only validate for Azure config
+        if isinstance(config, OpenBAOAzureLLMConfig):
+            try:
+                client = OpenAI(
+                    base_url=config.azure_openai_endpoint.rstrip('/') + "/openai/v1/",
+                    api_key=config.azure_openai_api_key,
+                    default_query={"api_version": config.azure_openai_api_version}
+                )
+                response = client.responses.create(
+                    model=config.azure_openai_deployment_name,
+                    instructions="hi",
+                    input=[{"role": "user", "content": [{"type": "input_text", "text": "hi"}]}]
+                )
+                if not response or not hasattr(response, "output_text"):
+                    raise Exception("No response from Azure OpenAI.")
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid Azure OpenAI credentials."
+                )
+            
         secret_data = secret_data.model_dump()
         result = write_bao_secret(secret_data, env="dev", app="llm")
-        
         logging.info("Reloaded service clients with new OpenBao configuration.")
         if result:
             ResponsesService.reload_client()
