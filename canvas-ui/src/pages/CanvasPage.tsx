@@ -142,7 +142,7 @@ export function CanvasPage(): React.ReactElement {
           </ul>
  
           <h2 className="text-xl font-semibold">Non Functional Requirements</h2>
-          <ul className="list-disc pl-6">
+          {/* <ul className="list-disc pl-6">
             {Array.isArray(canvas.nonFunctionalRequirements?.value)
               ? canvas.nonFunctionalRequirements.value.map((nfr: any, index: number) =>
                   typeof nfr === "string" ? (
@@ -154,7 +154,7 @@ export function CanvasPage(): React.ReactElement {
                   )
                 )
               : null}
-          </ul>
+          </ul> */}
         </div>
       </div>
  

@@ -83,30 +83,30 @@ export const RISKS_FIELD_LABELS = {
 
 export const nfrCategoryKeys = [
   "performanceRequirements",
-  "usabilityAccessibility",
-  "reliabilityAvailability",
-  "securityPrivacy",
+  // "usabilityAccessibility",
   "dataQualityIntegration",
+  "reliability",
+  "securityCompliancePrivacy",
 ] as const;
 
 export type NFRCategoryKey = typeof nfrCategoryKeys[number];
 
 export const nfrSchema = z.object({
   performanceRequirements: z.array(z.string()).default([]),
-  usabilityAccessibility: z.array(z.string()).default([]),
-  reliabilityAvailability: z.array(z.string()).default([]),
-  securityPrivacy: z.array(z.string()).default([]),
+  // usabilityAccessibility: z.array(z.string()).default([]),
   dataQualityIntegration: z.array(z.string()).default([]),
+  reliability: z.array(z.string()).default([]),
+  securityCompliancePrivacy: z.array(z.string()).default([]),
 });
 
 export type NFRValue = z.infer<typeof nfrSchema>;
 
 export const NFR_CATEGORY_LABELS: Record<NFRCategoryKey, string> = {
-  performanceRequirements: "Performance Requirements",
-  usabilityAccessibility: "Usability & Accessibility",
-  reliabilityAvailability: "Reliability & Availability",
-  securityPrivacy: "Security & Privacy",
+  performanceRequirements: "Performance & Scalability",
   dataQualityIntegration: "Data Quality & Integration",
+  // usabilityAccessibility: "Usability & Accessibility",
+  reliability: "Reliability",
+  securityCompliancePrivacy: "Security/Compliance/Privacy",
 };
 
 // ============================================================================
@@ -216,10 +216,10 @@ export function getStructuredFieldConfig(fieldKey: string): StructuredFieldConfi
         schema: nfrSchema,
         emptyValue: {
           performanceRequirements: [],
-          usabilityAccessibility: [],
-          reliabilityAvailability: [],
-          securityPrivacy: [],
+          //usabilityAccessibility: [],
           dataQualityIntegration: [],
+          reliability: [],
+          securityCompliancePrivacy: [],
         },
       };
 

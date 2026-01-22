@@ -1,3 +1,35 @@
+// Mapping between backend and frontend NFR keys
+const NFR_BACKEND_TO_FRONTEND: Record<string, string> = {
+  performance: "performanceRequirements",
+  data_quality: "dataQualityIntegration",
+  reliability: "reliability",
+  security: "securityCompliancePrivacy",
+};
+
+const NFR_FRONTEND_TO_BACKEND: Record<string, string> = {
+  performanceRequirements: "performance",
+  dataQualityIntegration: "data_quality",
+  reliability: "reliability",
+  securityCompliancePrivacy: "security",
+};
+
+export function mapNfrBackendToFrontend(obj: Record<string, any>): Record<string, any> {
+  const mapped: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const frontendKey = NFR_BACKEND_TO_FRONTEND[key] || key;
+    mapped[frontendKey] = value;
+  }
+  return mapped;
+}
+
+export function mapNfrFrontendToBackend(obj: Record<string, any>): Record<string, any> {
+  const mapped: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const backendKey = NFR_FRONTEND_TO_BACKEND[key] || key;
+    mapped[backendKey] = value;
+  }
+  return mapped;
+}
 "use client";
 
 /**
@@ -77,16 +109,21 @@ function transformFieldsToCanvas(fields: any) {
     return arr.map((it) => parseJsonIfString(it));
   };
 
-  const nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || [];
-  const organizedNFRs: any = {};
+  // NFR: support both backend and frontend keys
+  let nfrRaw = fields["Non Functional Requirements"] || fields.non_functional_requirements || {};
   if (Array.isArray(nfrRaw)) {
+    // legacy array format, try to convert
+    const organized: Record<string, string[]> = {};
     nfrRaw.forEach((item: any) => {
       const cat = item.category || "General";
       const req = item.requirement || "";
-      if (!organizedNFRs[cat]) organizedNFRs[cat] = [];
-      organizedNFRs[cat].push(req);
+      if (!organized[cat]) organized[cat] = [];
+      organized[cat].push(req);
     });
+    nfrRaw = organized;
   }
+  // Map backend keys to frontend keys
+  const nfrFrontend = mapNfrBackendToFrontend(nfrRaw);
 
   let relevantFactsRaw = fields.RelevantFacts || fields.relevantFacts || [];
   let relevantFactsArr: string[] = Array.isArray(relevantFactsRaw)
@@ -103,7 +140,7 @@ function transformFieldsToCanvas(fields: any) {
     keyFeatures: makeField(parseArray(fields["Key Features"] || fields.key_features)),
     risks: makeField(parseArray(fields.Risks || fields.risks)),
     assumptions: makeField(parseArray(fields.Assumptions || fields.assumptions)),
-    nonFunctionalRequirements: makeField(parseArray(fields["Non Functional Requirements"] || fields.non_functional_requirements)),
+    nonFunctionalRequirements: makeField(nfrFrontend),
     useCases: makeField(parseArray(fields["Use Cases"] || fields.use_cases)),
     governance: makeField(fields.Governance || fields.governance || {}),
     relevantFacts: makeField(parseArray(fields.RelevantFacts || fields.relevant_facts)),
@@ -116,55 +153,12 @@ function transformFieldsToCanvas(fields: any) {
 function mapCanvasToBackendPayload(canvas: any) {
   // Get the NFR value - it should already be in the correct categorized format
   const nfrValue = canvas.nonFunctionalRequirements?.value || {};
-  
-  // Ensure NFRs are in the correct object format with categories as keys and arrays as values
   let formattedNFRs: any = {};
-  
-  if (Array.isArray(nfrValue)) {
-    // If it's an array, convert it to categorized format
-    nfrValue.forEach((item: any) => {
-      if (typeof item === 'string') {
-        // Check if the string has a category prefix (e.g., "Performance & Scalability: ...")
-        const colonIndex = item.indexOf(':');
-        if (colonIndex > 0) {
-          const category = item.substring(0, colonIndex).trim();
-          const requirement = item.substring(colonIndex + 1).trim();
-          if (!formattedNFRs[category]) formattedNFRs[category] = [];
-          formattedNFRs[category].push(requirement);
-        } else {
-          // No category prefix, put it in "General"
-          if (!formattedNFRs["General"]) formattedNFRs["General"] = [];
-          formattedNFRs["General"].push(item);
-        }
-      } else if (item.category && item.requirement) {
-        // If it has category and requirement properties
-        if (!formattedNFRs[item.category]) formattedNFRs[item.category] = [];
-        formattedNFRs[item.category].push(item.requirement);
-      }
-    });
-  } else if (typeof nfrValue === 'object' && nfrValue !== null) {
-    // If it's already an object, use it directly (ensuring arrays)
+  if (typeof nfrValue === 'object' && nfrValue !== null) {
+    formattedNFRs = mapNfrFrontendToBackend(nfrValue);
+  } else {
     formattedNFRs = nfrValue;
-    // Ensure all values are arrays and filter out any that already have category prefixes
-    Object.keys(formattedNFRs).forEach(key => {
-      if (!Array.isArray(formattedNFRs[key])) {
-        formattedNFRs[key] = [];
-      } else {
-        // Clean up requirements that might still have category prefixes
-        formattedNFRs[key] = formattedNFRs[key].map((req: string) => {
-          if (typeof req === 'string' && req.includes(':')) {
-            const parts = req.split(':');
-            // Only remove prefix if it matches the current category
-            if (parts[0].trim() === key) {
-              return parts.slice(1).join(':').trim();
-            }
-          }
-          return req;
-        });
-      }
-    });
   }
- 
   return {
     "Title": canvas.title?.value || "",
     "Problem Statement": canvas.problemStatement?.value || "",
@@ -344,7 +338,7 @@ export function CategoryListEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
       {categories.map(({ key, label }) => {
         const items = categoryValue[key] || [];
         const isExpanded = expandedCategories.has(key);
@@ -426,9 +420,8 @@ export function CategoryListEditor({
       })}
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2 pt-4 border-t">
-        {/* <Button variant="outline" onClick={onCancel} disabled={isSaving}> */}
-         <Button variant="outline" onClick={onCancel} disabled={isActuallySaving || isSaving}>
+      <div className="flex items-center justify-end gap-2 pt-4 border-t bg-white sticky bottom-0 z-10">
+        <Button variant="outline" onClick={onCancel} disabled={isActuallySaving || isSaving}>
           Cancel
         </Button>
         <Button onClick={handleSaveChanges} disabled={isActuallySaving || isSaving}>
@@ -526,21 +519,28 @@ function CategoryItem({
 
       <div
         className={cn(
-          "flex-1 py-2 px-2 text-sm cursor-text rounded hover:bg-muted/30 break-words",
-          textClassName || ""
+          "flex-1"
         )}
-        onClick={onStartEdit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onStartEdit();
-          }
-        }}
-        tabIndex={0}
-        role="button"
-        aria-label={`Edit: ${text}`}
       >
-        {text}
+        <div
+          className={cn(
+            "py-2 px-3 rounded border border-muted bg-white shadow-sm text-sm cursor-text break-words transition-colors",
+            "hover:border-primary hover:bg-muted/30",
+            textClassName || ""
+          )}
+          onClick={onStartEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onStartEdit();
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-label={`Edit: ${text}`}
+        >
+          {text}
+        </div>
       </div>
 
       <Button
@@ -548,7 +548,7 @@ function CategoryItem({
         variant="ghost"
         size="icon"
         onClick={onDelete}
-        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+        className="h-8 w-8 opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
         aria-label="Delete item"
       >
         <Trash2 className="h-4 w-4" />
