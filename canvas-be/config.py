@@ -7,7 +7,10 @@ load_dotenv()
 
 class Settings:
     """Application configuration settings loaded from environment variables and OpenBao.""" 
-
+    # aiforce endpoints
+    AIFORCE_HEALTH_CHECK = os.getenv("AIFORCE_HEALTH_CHECK")
+    AIFORCE_PMS = os.getenv("AIFORCE_PMS")
+    AIFORCE_GCS = os.getenv("AIFORCE_GCS")
     
     # dynamic function to fetch AI Force bearer token from OpenBAO
     @staticmethod
