@@ -172,6 +172,32 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
 }
  
 function renderValue(value: unknown): React.ReactNode {
+    // NFR: object with category keys, each containing string arrays (MUST BE FIRST)
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const categories = Object.entries(value).filter(([_, arr]) => Array.isArray(arr) && arr.length > 0);
+      if (categories.length > 0) {
+        return (
+          <div className="space-y-4">
+            {categories.map(([category, points]) => (
+              <div key={category}>
+                <div className="flex items-center mb-1">
+                  <span className="text-foreground font-bold mr-2">•</span>
+                  <span className="font-bold capitalize">{category.replace(/:/, "")}:</span>
+                </div>
+                <ol className="list-decimal pl-8 space-y-1">
+                  {(points as string[])
+                    .filter(Boolean)
+                    .map((point, idx) => (
+                      <li key={idx} className="text-sm leading-relaxed">{point}</li>
+                    ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    }
+
     // Special handling: Render 'Risks' as bullet list with bold title and mitigation below
     if (Array.isArray(value) && value.length > 0) {
       // Risks: array of objects with 'risk' and 'mitigation'
@@ -228,17 +254,7 @@ function renderValue(value: unknown): React.ReactNode {
           </ul>
         );
       }
-      // If all are strings
-      if (value.every((nfr) => typeof nfr === 'string')) {
-        return (
-          <ul className="list-disc pl-5 space-y-1">
-            {value.map((nfr: string, idx: number) => (
-              <li key={idx} className="text-sm leading-relaxed">{nfr}</li>
-            ))}
-          </ul>
-        );
-      }
-      // NFR: objects with category keys, each containing string arrays
+      // NFR: array of objects with 'requirement' and 'category'
       if (value.every((nfr) => typeof nfr === 'object' && nfr !== null && 'requirement' in nfr && 'category' in nfr)) {
         // Group by category
         const grouped: Record<string, string[]> = {};
@@ -251,43 +267,32 @@ function renderValue(value: unknown): React.ReactNode {
           <div className="space-y-4">
             {Object.entries(grouped).map(([cat, points]) => (
               <div key={cat}>
-                <div className="font-semibold mb-1">{cat.replace(/:/,"")}</div>
-                <ul className="list-disc pl-5 space-y-1">
+                <div className="flex items-center mb-1">
+                  <span className="text-primary font-bold mr-2">•</span>
+                  <span className="font-bold">{cat.replace(/:/,"")}:</span>
+                </div>
+                <ol className="list-decimal pl-8 space-y-1">
                   {points.map((pt, idx) => (
                     <li key={idx} className="text-sm leading-relaxed">{pt}</li>
                   ))}
-                </ul>
+                </ol>
               </div>
             ))}
           </div>
         );
       }
-      // NFR: object with category keys, each containing array of points
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        const categories = Object.entries(value).filter(([cat, arr]) => Array.isArray(arr) && arr.length > 0);
-        if (categories.length > 0) {
-          return (
-            <div className="space-y-4">
-              {categories.map(([cat, arr]) => (
-                <div key={cat} className="">
-                  <div className="flex items-center mb-1">
-                    <span className="text-primary font-bold mr-2">•</span>
-                    <span className="font-bold">{cat.replace(/:/,"")}{":"}</span>
-                  </div>
-                  <ol className="list-decimal pl-8 space-y-1">
-                    {(arr as string[])
-                      .filter(Boolean)
-                      .map((pt, idx) => (
-                        <li key={idx} className="text-sm leading-relaxed">{pt}</li>
-                      ))}
-                  </ol>
-                </div>
-              ))}
-            </div>
-          );
-        }
+      // If all are strings
+      if (value.every((nfr) => typeof nfr === 'string')) {
+        return (
+          <ul className="list-disc pl-5 space-y-1">
+            {value.map((nfr: string, idx: number) => (
+              <li key={idx} className="text-sm leading-relaxed">{nfr}</li>
+            ))}
+          </ul>
+        );
       }
     }
+
   if (value === null || value === undefined || value === "") {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -519,25 +524,9 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     closeEdit();
   };
  
-  // // Add Relevant Facts to the card configs if not present
   let contentConfigs = allConfigs.filter(
     (f) => f.fieldKey !== "title" && f.fieldKey !== "problemStatement" && f.fieldKey !== "solutionRecommendation"
   );
-  // // Ensure Relevant Facts is included
-  // if (!contentConfigs.some(f => f.fieldKey === "relevantFacts")) {
-  //   contentConfigs.push({
-  //     id: "relevantFacts",
-  //     name: "Relevant Facts",
-  //     fieldKey: "relevantFacts",
-  //     type: "default",
-  //     category: "core",
-  //     enabled: true,
-  //     includeInGeneration: true,
-  //     order: 99,
-  //     valueType: "object",
-  //     // instructions: "Add any facts relevant to the canvas.",
-  //     description: "Relevant facts for this canvas."
-  //   
  
   const handleFileUpload = (files: FileList | null) => {
     if (files) {
@@ -637,9 +626,6 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
                         <Pencil className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-
-
-
                     </div>
                     <ScrollArea className="mt-3 flex-1 w-full">
                       {renderGovernanceTables(field.value)}
@@ -745,6 +731,3 @@ export function CanvasGrid({ canvas, onCanvasChange }: CanvasGridProps): React.R
     </div>
   );
 }
- 
- 
- 
