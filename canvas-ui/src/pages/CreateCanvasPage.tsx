@@ -186,11 +186,11 @@ export function CreateCanvasPage(): React.ReactElement {
     const value = e.target.value;
     setIdea(value);
     const trimmed = value.trim();
-    if (showPreviewAlert && (trimmed.length > 0 || files.length > 0)) {
+    if (showPreviewAlert && (trimmed.length > 0 && trimmed.length < 10 || files.length > 0)) {
       setShowPreviewAlert(false);
     }
     if (trimmed.length < 10) {
-      setIdeaError("there should be no blank characters are required");
+      setIdeaError("Minimum 10 characters are required");
     } else {
       setIdeaError(null);
     }
@@ -199,7 +199,7 @@ export function CreateCanvasPage(): React.ReactElement {
   const handleSubmit = async () => {
     const trimmed = idea.trim();
     if (!trimmed || trimmed.length < 10 || !canvasId) {
-      setIdeaError("blank characters are not allowed");
+      setIdeaError("Minimum 10 characters are required");
       return;
     }
     const userMsg = { role: "user", content: trimmed };

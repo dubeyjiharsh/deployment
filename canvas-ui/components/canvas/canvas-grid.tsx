@@ -174,15 +174,21 @@ function MarkdownContent({ content }: { content: string }): React.ReactElement {
 function renderValue(value: unknown): React.ReactNode {
     // NFR: object with category keys, each containing string arrays (MUST BE FIRST)
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      const categories = Object.entries(value).filter(([_, arr]) => Array.isArray(arr) && arr.length > 0);
+      const nfrLabels: Record<string, string> = {
+        performance: "Performance & Scalability",
+        data_quality: "Data Quality & Integration",
+        reliability: "Reliability",
+        security: "Security/Compliance/Privacy",
+      };
+      const categories = Object.entries(value).filter(([key, arr]) => nfrLabels[key] && Array.isArray(arr) && arr.length > 0);
       if (categories.length > 0) {
         return (
           <div className="space-y-4">
             {categories.map(([category, points]) => (
               <div key={category}>
                 <div className="flex items-center mb-1">
-                  <span className="text-foreground font-bold mr-2">•</span>
-                  <span className="font-bold capitalize">{category.replace(/:/, "")}:</span>
+                  <span className="text-foreground font-bold mr-2"></span>
+                  <span className="font-bold">{nfrLabels[category] || category}:</span>
                 </div>
                 <ol className="list-decimal pl-8 space-y-1">
                   {(points as string[])
@@ -280,6 +286,8 @@ function renderValue(value: unknown): React.ReactNode {
             ))}
           </div>
         );
+
+
       }
       // If all are strings
       if (value.every((nfr) => typeof nfr === 'string')) {
