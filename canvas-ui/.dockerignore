@@ -45,7 +45,5 @@ coverage
 *.pid.lock
 
 # Ignore public folder contents except index.html
-public/*
-!public/index.html
 
 
