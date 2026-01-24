@@ -1,4 +1,3 @@
-
 services:
   canvas-be:
     image: canvas-be:latest

@@ -1,0 +1,9 @@
+services:
+  canvas-be:
+    image: docker.io/library/canvas-be:aks
+
+    ports:
+      - "8000:8000"
+    
+    environment:
+      PORT: "8000"
