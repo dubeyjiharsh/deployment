@@ -1,0 +1,15 @@
+services:
+  openbao:
+    image: openbao/openbao:latest
+    container_name: canvas-obv
+    restart: always
+    ports:
+      - "8201:8200"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - BAO_ADDR=http://127.0.0.1:8200
+    volumes:
+      - ./bao-config/bao.hcl:/openbao/config/bao.hcl
+      - ./bao-data:/openbao/data
+    command: server -config=/openbao/config/bao.hcl
