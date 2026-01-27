@@ -35,7 +35,7 @@ async def configure_aiforce(secret_data: OpenBAOAIForceBearerTokenConfig):
             )
         
         # check validity of token via AI Force GCS
-        url = settings.AIFORCE_GCS+"/register/protected-resource"
+        url = settings.AIFORCE_PMS+"/users/list_user?page_number=1&page_size=1"
         response = requests.get(url=url, headers=headers)
         if response.status_code == 401:
             raise HTTPException(
@@ -102,7 +102,7 @@ async def configure_llm(secret_data: OpenBAOAIForceLLMConfig):
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
-                    detail="Invalid Azure OpenAI credentials."
+                    detail="Invalid Azure OpenAI credentials." + str(e)
                 )
             
         secret_data = secret_data.model_dump()

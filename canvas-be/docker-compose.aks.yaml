@@ -1,9 +1,9 @@
 services:
   canvas-be:
-    image: docker.io/library/canvas-be:aks
+    image: gapcanvas.azurecr.io/canvas-be:0.0.1
 
     ports:
       - "8000:8000"
-    
+
     environment:
       PORT: "8000"
