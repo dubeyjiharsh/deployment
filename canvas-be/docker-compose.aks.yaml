@@ -1,6 +1,6 @@
 services:
   canvas-be:
-    image: gapcanvas.azurecr.io/canvas-be:0.0.1
+    image: gapcanvas-hgb2eahdhhbghnc3.azurecr.io/canvas-be:0.0.1
 
     ports:
       - "8000:8000"
