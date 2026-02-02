@@ -7,6 +7,7 @@ load_dotenv()
 
 class Settings:
     """Application configuration settings loaded from environment variables and OpenBao.""" 
+
     # aiforce endpoints
     AIFORCE_HEALTH_CHECK = os.getenv("AIFORCE_HEALTH_CHECK")
     AIFORCE_PMS = os.getenv("AIFORCE_PMS")
@@ -15,12 +16,12 @@ class Settings:
     # dynamic function to fetch AI Force bearer token from OpenBAO
     @staticmethod
     def get_aiforce_config():
-        return read_bao_secret(env="dev", app="aiforce") or {}
+        return read_bao_secret(env="canvas", app="aiforce") or {}
 
     # Dynamic function to fetch Azure OpenAI credentials from OpenBAO
     @staticmethod
     def get_azure_openai_config():
-        return read_bao_secret(env="dev", app="llm") or {}
+        return read_bao_secret(env="canvas", app="llm") or {}
 
     # PostgreSQL Configuration
     POSTGRES_HOST = os.getenv("POSTGRES_HOST")
@@ -39,7 +40,7 @@ class Settings:
     @classmethod
     def validate(cls):
         """Validate required environment variables"""
-        required = ["POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_USER"]
+        required = ["POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"]
         missing = [var for var in required if not getattr(cls, var)]
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")

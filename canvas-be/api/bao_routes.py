@@ -50,7 +50,7 @@ async def configure_aiforce(secret_data: OpenBAOAIForceBearerTokenConfig):
 
         # make secret data JSON serializable
         secret_data = secret_data.model_dump()
-        result = write_bao_secret(secret_data, env="dev", app="aiforce")
+        result = write_bao_secret(secret_data, env="canvas", app="aiforce")
         logging.info("Successfully wrote AI Force configuration to OpenBAO.")
         if result:
             return JSONResponse(
@@ -106,7 +106,7 @@ async def configure_llm(secret_data: OpenBAOAIForceLLMConfig):
                 )
             
         secret_data = secret_data.model_dump()
-        result = write_bao_secret(secret_data, env="dev", app="llm")
+        result = write_bao_secret(secret_data, env="canvas", app="llm")
         logging.info("Reloaded service clients with new OpenBao configuration.")
         if result:
             ResponsesService.reload_client()
