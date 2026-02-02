@@ -1,3 +1,44 @@
+# name: Build and Push to Docker Hub
+
+# on:
+#   push:
+#     branches: [ "main" ]
+
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
+
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#       # --- Backend Build & Push ---
+#       - name: Build and Push Backend
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: ./canvas-be
+#           file: ./canvas-be/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
+
+#       # --- Frontend Build & Push ---
+#       - name: Build and Push Frontend
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: ./canvas-ui
+#           file: ./canvas-ui/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
+
 name: Build and Push to Docker Hub
 
 on:
@@ -8,18 +49,21 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
+      # actions/checkout@v4.1.7
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
+      # docker/login-action@v3.3.0
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # --- Backend Build & Push ---
+      # docker/build-push-action@v5.3.0
       - name: Build and Push Backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
         with:
           context: ./canvas-be
           file: ./canvas-be/Dockerfile
@@ -29,8 +73,9 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
 
       # --- Frontend Build & Push ---
+      # docker/build-push-action@v5.3.0
       - name: Build and Push Frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
         with:
           context: ./canvas-ui
           file: ./canvas-ui/Dockerfile
