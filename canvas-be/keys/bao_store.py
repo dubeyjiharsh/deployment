@@ -9,13 +9,13 @@ from models.schemas import OpenBAOAIForceBearerTokenConfig, OpenBAOAzureLLMConfi
 load_dotenv()
 
 # Openbao Configuration
-BAO_ADDR = os.getenv("OPENBAO_ADDR")
+VAULT_ADDR = os.getenv("VAULT_ADDR")
 
 def read_vault_key_file():
     """ Read the Vault root token from a file. """
     try:
-        OPENBAO_ROOT_TOKEN_PATH = os.getenv("OPENBAO_ROOT_TOKEN_PATH")
-        with open(os.path.join(OPENBAO_ROOT_TOKEN_PATH, "root_token.txt"), "r", encoding="utf-8") as file:
+        VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+        with open(os.path.join(VAULT_TOKEN, "root_token.txt"), "r", encoding="utf-8") as file:
             token = file.read().strip()
             return token
     except Exception as e:
@@ -29,7 +29,7 @@ def write_bao_secret(secret_data: dict, env: str, app: str) -> bool:
     """
     try:
         root_token = read_vault_key_file()
-        client = VaultHandler(use_vault=True, vault_url=BAO_ADDR, vault_token=root_token, vault_mount_point=f"kv/data/{env}/{app}")
+        client = VaultHandler(use_vault=True, vault_url=VAULT_ADDR, vault_token=root_token, vault_mount_point=f"kv/data/{env}/{app}")
 
         for key, value in secret_data.items():
             check = client.save_json_secret(key=key, value=value)
@@ -48,7 +48,7 @@ def read_bao_secret(env: str, app: str) -> dict:
 
     try:
         root_token = read_vault_key_file()
-        client = VaultHandler(use_vault=True, vault_url=BAO_ADDR, vault_token=root_token, vault_mount_point=f"kv/data/{env}/{app}")
+        client = VaultHandler(use_vault=True, vault_url=VAULT_ADDR, vault_token=root_token, vault_mount_point=f"kv/data/{env}/{app}")
         
         app_mapping = {
             "aiforce": OpenBAOAIForceBearerTokenConfig,
