@@ -1,19 +1,11 @@
-
-# name: Build and Push FE and BE to Docker Hub
+# name: Build and Push to Docker Hub
 
 # on:
 #   push:
-#     branches:
-#       - main
-#     paths:
-#       - 'canvas-ui/**'
-#       - 'canvas-be/**'
-#       - '.github/workflows/docker-pipeline.yml'
+#     branches: [ "main" ]
 
 # jobs:
-#   # --- Frontend Job ---
-#   build-frontend:
-#     name: Build and Push Frontend
+#   build-and-push:
 #     runs-on: ubuntu-latest
 #     steps:
 #       - name: Checkout Code
@@ -25,7 +17,19 @@
 #           username: ${{ secrets.DOCKERHUB_USERNAME }}
 #           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#       - name: Build and Push FE Image
+#       # --- Backend Build & Push ---
+#       - name: Build and Push Backend
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: ./canvas-be
+#           file: ./canvas-be/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
+
+#       # --- Frontend Build & Push ---
+#       - name: Build and Push Frontend
 #         uses: docker/build-push-action@v5
 #         with:
 #           context: ./canvas-ui
@@ -35,66 +39,47 @@
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
 
-#   # --- Backend Job ---
-#   build-backend:
-#     name: Build and Push Backend
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout Code
-#         uses: actions/checkout@v4
-
-#       - name: Login to Docker Hub
-#         uses: docker/login-action@v3
-#         with:
-#           username: ${{ secrets.DOCKERHUB_USERNAME }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-#       - name: Build and Push BE Image
-#         uses: docker/build-push-action@v5
-#         with:
-#           context: ./canvas-be
-#           file: ./canvas-be/Dockerfile
-#           push: true
-#           tags: |
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
-name: Build and Push FE and BE to Docker Hub
+name: Build and Push to Docker Hub
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'canvas-ui/**'
-      - 'canvas-be/**'
-      - '.github/workflows/docker-pipeline.yml'
+    branches: [ "main" ]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout the code (Required for the runner to see your files)
-      # Pinned to a specific SHA to satisfy your corporate security policy.
+      # actions/checkout@v4.1.7
       - name: Checkout Code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
-      # 2. Login to Docker Hub (Manual Shell Command)
-      # This bypasses the 404 error because it doesn't download external scripts.
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+      # docker/login-action@v3.3.0
+      - name: Login to Docker Hub
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3. Build and Push Frontend (canvas-ui)
-      - name: Build and Push FE Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest ./canvas-ui
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
+      # --- Backend Build & Push ---
+      # docker/build-push-action@v5.3.0
+      - name: Build and Push Backend
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+        with:
+          context: ./canvas-be
+          file: ./canvas-be/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
 
-      # 4. Build and Push Backend (canvas-be)
-      - name: Build and Push BE Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest ./canvas-be
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
+      # --- Frontend Build & Push ---
+      # docker/build-push-action@v5.3.0
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+        with:
+          context: ./canvas-ui
+          file: ./canvas-ui/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
