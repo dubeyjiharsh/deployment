@@ -18,6 +18,7 @@ class ResponsesService:
         cls._client = OpenAI(
             base_url=azure_config.get("azure_openai_endpoint", "")+"openai/v1/",
             api_key=azure_config.get("azure_openai_api_key", ""),
+            default_query={"api_version": azure_config.get("azure_openai_api_version", "")}
         )
         cls._last_config = azure_config
 
