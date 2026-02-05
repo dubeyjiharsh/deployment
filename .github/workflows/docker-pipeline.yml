@@ -39,47 +39,110 @@
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
 
-name: Build and Push to Docker Hub
+# name: Build and Push to Docker Hub
+
+# on:
+#   push:
+#     branches: [ "main" ]
+
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     steps:
+#       # actions/checkout@v4.1.7
+#       - name: Checkout Code
+#         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+#       # docker/login-action@v3.3.0
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#       # --- Backend Build & Push ---
+#       # docker/build-push-action@v5.3.0
+#       - name: Build and Push Backend
+#         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+#         with:
+#           context: ./canvas-be
+#           file: ./canvas-be/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
+
+#       # --- Frontend Build & Push ---
+#       # docker/build-push-action@v5.3.0
+#       - name: Build and Push Frontend
+#         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+#         with:
+#           context: ./canvas-ui
+#           file: ./canvas-ui/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
+# # 
+
+name: Deploy to AKS on Tag
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ankithcl/canvas-postgres
+  HELM_RELEASE: gap-canvas-postgres
+  NAMESPACE: canvas
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # actions/checkout@v4.1.7
-      - name: Checkout Code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      # docker/login-action@v3.3.0
-      - name: Login to Docker Hub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    # Extract tag name (v1.2.3)
+    - name: Extract Git Tag
+      id: tag
+      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      # --- Backend Build & Push ---
-      # docker/build-push-action@v5.3.0
-      - name: Build and Push Backend
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
-        with:
-          context: ./canvas-be
-          file: ./canvas-be/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
+    # Login to DockerHub
+    - name: Docker Login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # --- Frontend Build & Push ---
-      # docker/build-push-action@v5.3.0
-      - name: Build and Push Frontend
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
-        with:
-          context: ./canvas-ui
-          file: ./canvas-ui/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
+    # Build & push image (example shown for postgres/custom image)
+    - name: Build & Push Docker Image
+      run: |
+        docker build -t $IMAGE_NAME:${TAG} .
+        docker push $IMAGE_NAME:${TAG}
+
+    # Azure Login
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Get AKS credentials
+    - name: Set AKS Context
+      uses: azure/aks-set-context@v4
+      with:
+        resource-group: AyushThakurRG
+        cluster-name: aks-canvas
+
+    # Helm Deploy
+    - name: Helm Upgrade
+      run: |
+        helm upgrade --install $HELM_RELEASE canvas-infra/helm/gap-canvas-postgres \
+          --namespace $NAMESPACE \
+          --create-namespace \
+          --set image.repository=$IMAGE_NAME \
+          --set image.tag=$TAG
+
