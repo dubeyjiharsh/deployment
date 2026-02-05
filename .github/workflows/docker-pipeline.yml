@@ -89,11 +89,12 @@ name: Deploy to AKS on Tag
 
 on:
   push:
+    branches-ignore:
+      - "**"
     tags:
       - "v*"
 
 env:
-  REGISTRY: docker.io
   IMAGE_NAME: ankithcl/canvas-postgres
   HELM_RELEASE: gap-canvas-postgres
   NAMESPACE: canvas
@@ -106,38 +107,33 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # Extract tag name (v1.2.3)
     - name: Extract Git Tag
-      id: tag
-      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      run: |
+        TAG="${GITHUB_REF##*/}"
+        echo "TAG=$TAG" >> $GITHUB_ENV
 
-    # Login to DockerHub
     - name: Docker Login
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # Build & push image (example shown for postgres/custom image)
     - name: Build & Push Docker Image
       run: |
-        docker build -t $IMAGE_NAME:${TAG} .
-        docker push $IMAGE_NAME:${TAG}
+        docker build -t $IMAGE_NAME:$TAG .
+        docker push $IMAGE_NAME:$TAG
 
-    # Azure Login
     - name: Azure Login
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # Get AKS credentials
     - name: Set AKS Context
       uses: azure/aks-set-context@v4
       with:
         resource-group: AyushThakurRG
         cluster-name: aks-canvas
 
-    # Helm Deploy
     - name: Helm Upgrade
       run: |
         helm upgrade --install $HELM_RELEASE canvas-infra/helm/gap-canvas-postgres \
@@ -145,4 +141,3 @@ jobs:
           --create-namespace \
           --set image.repository=$IMAGE_NAME \
           --set image.tag=$TAG
-
