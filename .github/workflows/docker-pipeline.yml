@@ -84,52 +84,52 @@
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
 #             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
 # # 
-
-name: Build and Push to Docker Hub (On Tag)
+name: Build & Push Docker Image
 
 on:
   push:
-    branches-ignore:
-      - "**"
     tags:
-      - "v*"
+      - "canvas-be-v*.*.*"
+      - "canvas-fe-v*.*.*"
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Extract tag name (v1.2.3)
-      - name: Extract Git Tag
+      - name: Detect service and version from tag
         run: |
-          TAG="${GITHUB_REF##*/}"
-          echo "TAG=$TAG" >> $GITHUB_ENV
+          TAG=${GITHUB_REF#refs/tags/}
+
+          if [[ $TAG == canvas-be-* ]]; then
+            echo "SERVICE=canvas-be" >> $GITHUB_ENV
+            echo "IMAGE=ankithcl/canvas-be" >> $GITHUB_ENV
+          elif [[ $TAG == canvas-fe-* ]]; then
+            echo "SERVICE=canvas-fe" >> $GITHUB_ENV
+            echo "IMAGE=ankithcl/canvas-fe" >> $GITHUB_ENV
+          else
+            echo "Unknown tag format"
+            exit 1
+          fi
+
+          VERSION=${TAG#*-v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # --- Backend Build & Push ---
-      - name: Build and Push Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./canvas-be
-          file: ./canvas-be/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ env.TAG }}
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t $IMAGE:$VERSION \
+            ./$SERVICE
 
-      # --- Frontend Build & Push ---
-      - name: Build and Push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./canvas-ui
-          file: ./canvas-ui/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ env.TAG }}
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE:$VERSION
