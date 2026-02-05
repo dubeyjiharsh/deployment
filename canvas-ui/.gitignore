@@ -93,7 +93,7 @@ public
 # TernJS port file
 .tern-port
 
-package-lock.json
+
 test.tsx
 
 #.env file
