@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import axios from "axios";
 import { IconKey, IconRobot, IconCheck, IconAlertCircle } from "@tabler/icons-react";
 import { getToken } from "@/src/lib/auth";
+import { CONFIGURE_API_ENDPOINTS } from "@/config/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export function AdminConfigurePage() {
   // Bearer Token State
@@ -26,55 +27,53 @@ export function AdminConfigurePage() {
   const [llmLoading, setLlmLoading] = React.useState(false);
 
   // Handle Bearer Token Update
-  // Handle Bearer Token Update
-const handleBearerTokenUpdate = async () => {
-  if (!bearerToken.trim()) {
-    toast.error("Please enter a bearer token");
-    return;
-  }
-
-  setBearerLoading(true);
-  try {
-    const authToken = getToken();
-    const response = await axios.post(
-      `${API_BASE_URL}/api/openbao/configure/aiforce`,
-      {
-        bearer_token: bearerToken,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.status === 200 || response.status === 201) {
-      toast.success("Bearer token updated successfully!", {
-        icon: <IconCheck className="h-5 w-5" />,
-        position: "top-center",
-        duration: 3000,
-      });
-      setBearerToken("");
+  const handleBearerTokenUpdate = async () => {
+    if (!bearerToken.trim()) {
+      toast.error("Please enter a bearer token");
+      return;
     }
-  } catch (error: any) {
-    console.error("Bearer token update failed:", error);
-    
-    // Check for both 'detail' and 'message' fields in the error response
-    const errorMessage = 
-      error.response?.data?.detail || 
-      error.response?.data?.message || 
-      "Failed to update bearer token";
-    
-    toast.error(errorMessage, {
-      icon: <IconAlertCircle className="h-5 w-5" />,
-      position: "top-center",
-      duration: 4000,
-    });
-  } finally {
-    setBearerLoading(false);
-  }
-};
+
+    setBearerLoading(true);
+    try {
+      const authToken = getToken();
+      const response = await axios.post(
+        CONFIGURE_API_ENDPOINTS.aiforce,
+        {
+          bearer_token: bearerToken,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success("Bearer token updated successfully!", {
+          icon: <IconCheck className="h-5 w-5" />,
+          position: "top-center",
+          duration: 3000,
+        });
+        setBearerToken("");
+      }
+    } catch (error: any) {
+      console.error("Bearer token update failed:", error);
+
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        "Failed to update bearer token";
+
+      toast.error(errorMessage, {
+        icon: <IconAlertCircle className="h-5 w-5" />,
+        position: "top-center",
+        duration: 4000,
+      });
+    } finally {
+      setBearerLoading(false);
+    }
+  };
 
   // Handle LLM Configuration Update
   const handleLlmConfigUpdate = async () => {
@@ -87,7 +86,7 @@ const handleBearerTokenUpdate = async () => {
     try {
       const authToken = getToken();
       const response = await axios.post(
-        `${API_BASE_URL}/api/openbao/configure/llm`,
+        CONFIGURE_API_ENDPOINTS.llm,
         {
           azure_openai_endpoint: endpoint,
           azure_openai_api_key: llmApiKey,
@@ -106,9 +105,7 @@ const handleBearerTokenUpdate = async () => {
         toast.success("LLM configuration updated successfully!", {
           icon: <IconCheck className="h-5 w-5" />,
         });
-        // setLlmProvider("");
         setLlmApiKey("");
-        // setLlmModel("");
         setApiVersion("");
         setEndpoint("");
         setDeploymentName("");

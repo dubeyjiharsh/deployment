@@ -1,11 +1,29 @@
+# version: '3.8'
+
+# services:
+#   canvas-ui:
+#     build: .
+#     ports:
+#       - "3001:3001" # Change the exposed port to avoid conflicts
+#     volumes:
+#       - /app/node_modules
+#     environment:
+#       - NODE_ENV=production
+
 version: '3.8'
 
 services:
   canvas-ui:
-    build: .
+    image: docker.io/bagiya/canvas-ui:akstest
     ports:
-      - "3001:3001" # Change the exposed port to avoid conflicts
-    volumes:
-      - /app/node_modules
+      - "3001:3001"
     environment:
       - NODE_ENV=production
+      # Runtime configuration - these can be overridden
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-https://10.144.58.11/canvas/auth}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-canvas-realm}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-canvas-client}
+      - API_BASE_URL=${API_BASE_URL:-https://10.144.58.11/canvas}
+      - BASE_PATH=${BASE_PATH:-/canvas/}
+    volumes:
+      - /app/node_modules

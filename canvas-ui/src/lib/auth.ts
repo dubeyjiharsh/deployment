@@ -1,18 +1,49 @@
 import Keycloak from "keycloak-js";
 
+// Runtime config type definition
+declare global {
+  interface Window {
+    APP_CONFIG: {
+      KEYCLOAK_URL: string;
+      KEYCLOAK_REALM: string;
+      KEYCLOAK_CLIENT_ID: string;
+      API_BASE_URL: string;
+      BASE_PATH: string;
+    };
+  }
+}
+
+// Get config from runtime (injected by entrypoint.sh)
+// Fallback to import.meta.env for local development
+const getConfig = () => {
+  if (typeof window !== 'undefined' && window.APP_CONFIG) {
+    return window.APP_CONFIG;
+  }
+  // Fallback for local development
+  return {
+    KEYCLOAK_URL: import.meta.env.VITE_KEYCLOAK_URL ,
+    KEYCLOAK_REALM: import.meta.env.VITE_KEYCLOAK_REALM ,
+    KEYCLOAK_CLIENT_ID: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL ,
+    BASE_PATH: import.meta.env.VITE_BASE_PATH ,
+  };
+};
+
+const config = getConfig();
+
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL,
-  realm: import.meta.env.VITE_KEYCLOAK_REALM,
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+  url: config.KEYCLOAK_URL,
+  realm: config.KEYCLOAK_REALM,
+  clientId: config.KEYCLOAK_CLIENT_ID,
 });
 
 // Ensure authServerUrl is set correctly
 if (!keycloak.authServerUrl) {
-  keycloak.authServerUrl = import.meta.env.VITE_KEYCLOAK_URL;
+  keycloak.authServerUrl = config.KEYCLOAK_URL;
 }
 
 // Backend API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = config.API_BASE_URL;
 
 // Check if user is authenticated via AI Force
 const isAIForceAuthenticated = () => {
@@ -231,27 +262,7 @@ export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
             console.warn("Refresh token is undefined");
           }
           
-          localStorage.setItem("keycloak", JSON.stringify(true));
-
-          const bottomMenuItems = JSON.stringify([
-            {
-              id: 10,
-              menu_name: "Logout",
-              description: "User profile related page",
-              title: "Logout",
-              icon_path: "bi bi-person-circle",
-              project_id: null,
-              display_order: 10,
-              display_type_id: 1,
-              route_type: 0,
-              url: "/profile",
-              parent_menu_id: null,
-              permission_type: 2,
-            },
-          ]);
-          localStorage.setItem("bottomMenuItems", bottomMenuItems);
-
-          // Store user info from backend response
+          // Store user info in localStorage
           const userInfo = JSON.stringify({
             user_id: userDetails.user_id,
             user_name: userDetails.user_name,
@@ -263,7 +274,7 @@ export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
             is_super_admin: userDetails.role_type_name === "Super Admin",
             is_project_admin: userDetails.role_type_name === "Project Admin",
             email_id: userDetails.email_id,
-            user_type: "platform_user",
+            user_type: "keycloak_user",
             role_type_id: userDetails.role_id,
             role_type: userDetails.role_type_name,
             first_name: userDetails.first_name,
@@ -272,17 +283,21 @@ export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
             last_active: userDetails.last_active,
           });
           localStorage.setItem("user-info", userInfo);
+          localStorage.setItem("keycloak", JSON.stringify(true));
 
-          // Determine redirect URL based on role from backend
-          const redirectUrl = getRedirectUrlByRole(userDetails.role_type_name);
-          console.log("Redirecting to:", redirectUrl, "based on role:", userDetails.role_type_name);
+          console.log("User info stored in localStorage:");
+
           
-          // Clean up OAuth params and redirect
+          // console.log("User info stored in localStorage:", userInfo);
+
+          // Clean up OAuth params from URL
           cleanOAuthParams();
-          
-          // Set the redirect URL
+
+          // Determine redirect based on role
+          const redirectUrl = getRedirectUrlByRole(userDetails.role_type_name);
+          console.log("Redirecting to:", redirectUrl);
           window.location.hash = redirectUrl;
-          
+
           onAuthenticatedCallback();
 
         } catch (error) {
@@ -292,7 +307,7 @@ export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
           if (keycloak.token) {
             try {
               await keycloak.logout({
-                redirectUri: `${window.location.origin}/`
+                redirectUri: `${window.location.origin}${config.BASE_PATH}`
               });
             } catch (logoutError) {
               console.error("Keycloak logout failed:", logoutError);
@@ -338,7 +353,7 @@ export const initKeycloak = async (onAuthenticatedCallback: () => void) => {
 export const doLogin = () => {
   console.log("Redirecting to Keycloak login...");
   keycloak.login({
-    redirectUri: `${window.location.origin}/canvas`
+    redirectUri: `${window.location.origin}${config.BASE_PATH}`
   });
 };
 
@@ -351,26 +366,23 @@ export const doLogout = () => {
   localStorage.clear();
   
   if (isKeycloakAuth && keycloak.token) {
-    const logoutRedirectUri = `${window.location.origin}/`;
+    const logoutRedirectUri = `${window.location.origin}${config.BASE_PATH}`;
     const logoutUrl = `${keycloak.authServerUrl}/realms/${keycloak.realm}/protocol/openid-connect/logout`;
-    
+
     const params = new URLSearchParams({
       post_logout_redirect_uri: logoutRedirectUri,
       client_id: keycloak.clientId || 'canvas-client'
     });
-    
+
     if (keycloak.idToken) {
       params.append('id_token_hint', keycloak.idToken);
     }
-    
+
     const fullLogoutUrl = `${logoutUrl}?${params.toString()}`;
     console.log("Redirecting to Keycloak logout:", fullLogoutUrl);
-    
-    window.location.hash = '#/logout';
-    
-    setTimeout(() => {
-      window.location.href = fullLogoutUrl;
-    }, 100);
+
+    // Directly redirect to Keycloak logout without showing #/logout
+    window.location.href = fullLogoutUrl;
   } else {
     console.log("AI Force logout - redirecting to logout page");
     window.location.hash = '#/logout';
@@ -489,28 +501,28 @@ export const verifyUserOnPageLoad = async () => {
           localStorage.clear();
           console.log("Redirecting to Keycloak login...");
           keycloak.login({
-            redirectUri: `${window.location.origin}/canvas`
+            redirectUri: `${window.location.origin}${config.BASE_PATH}`
           });
         }
       } else {
         console.warn("Username or auth token missing in user info.");
         console.log("Redirecting to Keycloak login...");
         keycloak.login({
-          redirectUri: `${window.location.origin}/canvas`
+          redirectUri: `${window.location.origin}${config.BASE_PATH}`
         });
       }
     } else {
       console.warn("No user info found in localStorage.");
       console.log("Redirecting to Keycloak login...");
       keycloak.login({
-        redirectUri: `${window.location.origin}/canvas`
+        redirectUri: `${window.location.origin}${config.BASE_PATH}`
       });
     }
   } catch (e) {
     console.error("Unexpected error during user validation:", e);
     console.log("Redirecting to Keycloak login...");
     keycloak.login({
-      redirectUri: `${window.location.origin}/canvas`
+      redirectUri: `${window.location.origin}${config.BASE_PATH}`
     });
   }
 };
