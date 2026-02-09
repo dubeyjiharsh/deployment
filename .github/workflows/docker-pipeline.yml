@@ -1,135 +1,58 @@
-# name: Build and Push to Docker Hub
 
-# on:
-#   push:
-#     branches: [ "main" ]
 
-# jobs:
-#   build-and-push:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout Code
-#         uses: actions/checkout@v4
-
-#       - name: Login to Docker Hub
-#         uses: docker/login-action@v3
-#         with:
-#           username: ${{ secrets.DOCKERHUB_USERNAME }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-#       # --- Backend Build & Push ---
-#       - name: Build and Push Backend
-#         uses: docker/build-push-action@v5
-#         with:
-#           context: ./canvas-be
-#           file: ./canvas-be/Dockerfile
-#           push: true
-#           tags: |
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
-
-#       # --- Frontend Build & Push ---
-#       - name: Build and Push Frontend
-#         uses: docker/build-push-action@v5
-#         with:
-#           context: ./canvas-ui
-#           file: ./canvas-ui/Dockerfile
-#           push: true
-#           tags: |
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
-
-# name: Build and Push to Docker Hub
-
-# on:
-#   push:
-#     branches: [ "main" ]
-
-# jobs:
-#   build-and-push:
-#     runs-on: ubuntu-latest
-#     steps:
-#       # actions/checkout@v4.1.7
-#       - name: Checkout Code
-#         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-
-#       # docker/login-action@v3.3.0
-#       - name: Login to Docker Hub
-#         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
-#         with:
-#           username: ${{ secrets.DOCKERHUB_USERNAME }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-#       # --- Backend Build & Push ---
-#       # docker/build-push-action@v5.3.0
-#       - name: Build and Push Backend
-#         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
-#         with:
-#           context: ./canvas-be
-#           file: ./canvas-be/Dockerfile
-#           push: true
-#           tags: |
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:latest
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-be:${{ github.sha }}
-
-#       # --- Frontend Build & Push ---
-#       # docker/build-push-action@v5.3.0
-#       - name: Build and Push Frontend
-#         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
-#         with:
-#           context: ./canvas-ui
-#           file: ./canvas-ui/Dockerfile
-#           push: true
-#           tags: |
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:latest
-#             ${{ secrets.DOCKERHUB_USERNAME }}/canvas-ui:${{ github.sha }}
-# # 
 name: Build & Push Docker Image
-
 on:
   push:
+    branches: ["main"]
     tags:
-      - "canvas-be-v*.*.*"
-      - "canvas-fe-v*.*.*"
-
+      - "v*.*.*"   # run only on tag push
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Detect service and version from tag
+      # Detect which folder changed
+      - name: Detect changed folder
+        id: detect
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-
-          if [[ $TAG == canvas-be-* ]]; then
-            echo "SERVICE=canvas-be" >> $GITHUB_ENV
-            echo "IMAGE=ankithcl/canvas-be" >> $GITHUB_ENV
-          elif [[ $TAG == canvas-fe-* ]]; then
-            echo "SERVICE=canvas-fe" >> $GITHUB_ENV
-            echo "IMAGE=ankithcl/canvas-fe" >> $GITHUB_ENV
+          TAG=${{ github.ref_name }}
+          PREV_TAG=$(git describe --tags --abbrev=0 ${TAG}^ 2>/dev/null || echo "")
+          echo "Previous tag: $PREV_TAG"
+          if [ -z "$PREV_TAG" ]; then
+            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r $TAG)
           else
-            echo "Unknown tag format"
+            CHANGED_FILES=$(git diff --name-only $PREV_TAG $TAG)
+          fi
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          if echo "$CHANGED_FILES" | grep -q "^canvas-be/"; then
+            echo "SERVICE=canvas-be" >> $GITHUB_ENV
+          elif echo "$CHANGED_FILES" | grep -q "^canvas-fe/"; then
+            echo "SERVICE=canvas-fe" >> $GITHUB_ENV
+          else
+            echo "No changes in canvas-be or canvas-fe"
             exit 1
           fi
-
-          VERSION=${TAG#*-v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
+      # Login to Docker Hub
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKERHUB_USERNAME }}" \
+            --password-stdin
+      #  Build Docker image using TAG
       - name: Build Docker image
         run: |
           docker build \
-            -t $IMAGE:$VERSION \
-            ./$SERVICE
-
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.SERVICE }}:${{ github.ref_name }} \
+            ./${{ env.SERVICE }}
+      # Push Docker image with SAME TAG
       - name: Push Docker image
         run: |
-          docker push $IMAGE:$VERSION
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.SERVICE }}:${{ github.ref_name }}
+  
+
