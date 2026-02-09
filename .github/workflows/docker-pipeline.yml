@@ -38,10 +38,10 @@ jobs:
           echo "$CHANGED_FILES"
           if echo "$CHANGED_FILES" | grep -q "^canvas-be/"; then
             echo "SERVICE=canvas-be" >> $GITHUB_ENV
-          elif echo "$CHANGED_FILES" | grep -q "^canvas-fe/"; then
-            echo "SERVICE=canvas-fe" >> $GITHUB_ENV
+          elif echo "$CHANGED_FILES" | grep -q "^canvas-ui/"; then
+            echo "SERVICE=canvas-ui" >> $GITHUB_ENV
           else
-            echo "No changes in canvas-be or canvas-fe"
+            echo "No changes in canvas-be or canvas-ui"
             exit 1
           fi
       # Login to Docker Hub
